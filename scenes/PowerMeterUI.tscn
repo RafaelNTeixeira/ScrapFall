@@ -16,23 +16,29 @@ script = ExtResource("1_5wh6y")
 
 [node name="ProgressBar" type="ProgressBar" parent="Control" unique_id=989091035]
 layout_mode = 0
-offset_right = 1152.0
-offset_bottom = 102.0
+offset_right = 1080.0
+offset_bottom = 56.0
 step = 1.0
 
 [node name="EnergyLabel" type="Label" parent="Control" unique_id=574312686]
 layout_mode = 0
-offset_right = 40.0
-offset_bottom = 23.0
+offset_left = 10.0
+offset_top = 5.0
+offset_right = 72.0
+offset_bottom = 28.0
+text = "100/100"
 
 [node name="RegenLabel" type="Label" parent="Control" unique_id=1795856242]
 layout_mode = 0
-offset_right = 40.0
-offset_bottom = 23.0
+offset_left = 10.0
+offset_top = 28.0
+offset_right = 60.0
+offset_bottom = 51.0
+text = "+1/sec"
 
 [node name="NoEnergyFlash" type="ColorRect" parent="Control" unique_id=741351804]
 layout_mode = 0
-offset_right = 1152.0
-offset_bottom = 102.0
+offset_right = 1080.0
+offset_bottom = 56.0
 mouse_filter = 2
 color = Color(0.8901961, 0, 0, 0)
