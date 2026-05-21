@@ -14,7 +14,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_5wh6y")
 
-[node name="ProgressBar" type="ProgressBar" parent="Control" unique_id=989091035]
+[node name="FillBar" type="ProgressBar" parent="Control" unique_id=989091035]
 layout_mode = 0
 offset_right = 1080.0
 offset_bottom = 56.0
