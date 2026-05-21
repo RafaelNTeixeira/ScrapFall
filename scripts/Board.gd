@@ -153,8 +153,8 @@ func _generate_walls() -> void:
 	var wall_mid_y:  float = wall_top + wall_height * 0.5
 
 	# Board left and right X edges
-	var board_left:  float = board_origin.x - (0.9 * PEG_SPACING_X)
-	var board_right: float = board_origin.x + (COLS_ODD - 0.1) * PEG_SPACING_X
+	var board_left:  float = board_origin.x - (0.1 * PEG_SPACING_X)
+	var board_right: float = board_origin.x + (COLS_ODD - 0.9) * PEG_SPACING_X
 
 	# Left wall — inner face flush with the board left edge
 	_add_wall(
