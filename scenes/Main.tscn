@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://58hcr7dmrjxr"]
+
+[ext_resource type="PackedScene" uid="uid://bl3hdribg6hh8" path="res://scenes/Board.tscn" id="1_rvslj"]
+[ext_resource type="PackedScene" uid="uid://dg4v756kbnwjj" path="res://scenes/PowerMeterUI.tscn" id="2_0bbpv"]
+
+[node name="Main" type="Node2D" unique_id=1941893153]
+
+[node name="Board" parent="." unique_id=1036975276 instance=ExtResource("1_rvslj")]
+
+[node name="HUDLayer" parent="." unique_id=1048863011 instance=ExtResource("2_0bbpv")]

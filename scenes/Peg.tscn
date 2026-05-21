@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://bchac0ccpmxwo"]
+
+[ext_resource type="Script" uid="uid://jj1a8j7xpkqt" path="res://scripts/Peg.gd" id="1_mhmpc"]
+[ext_resource type="Texture2D" uid="uid://dwrevw2al38cx" path="res://images/BrownDot.png" id="2_focci"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_tfw68"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_bo8by"]
+radius = 13.0
+
+[node name="Peg" type="StaticBody2D" unique_id=1992481609]
+collision_mask = 0
+script = ExtResource("1_mhmpc")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=2032201846]
+texture = ExtResource("2_focci")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1608568689]
+shape = SubResource("CircleShape2D_tfw68")
+
+[node name="Area2D" type="Area2D" parent="." unique_id=290398349]
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=1009150880]
+shape = SubResource("CircleShape2D_bo8by")

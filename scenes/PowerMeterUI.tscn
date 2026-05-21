@@ -1,0 +1,38 @@
+[gd_scene format=3 uid="uid://dg4v756kbnwjj"]
+
+[ext_resource type="Script" uid="uid://mdgxrx6ojfk8" path="res://scripts/PowerMeterUI.gd" id="1_5wh6y"]
+
+[node name="PowerMeterUI" type="CanvasLayer" unique_id=1048863011]
+layer = 10
+
+[node name="Control" type="Control" parent="." unique_id=1417166269]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_5wh6y")
+
+[node name="ProgressBar" type="ProgressBar" parent="Control" unique_id=989091035]
+layout_mode = 0
+offset_right = 1152.0
+offset_bottom = 102.0
+step = 1.0
+
+[node name="EnergyLabel" type="Label" parent="Control" unique_id=574312686]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="RegenLabel" type="Label" parent="Control" unique_id=1795856242]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="NoEnergyFlash" type="ColorRect" parent="Control" unique_id=741351804]
+layout_mode = 0
+offset_right = 1152.0
+offset_bottom = 102.0
+mouse_filter = 2
+color = Color(0.8901961, 0, 0, 0)

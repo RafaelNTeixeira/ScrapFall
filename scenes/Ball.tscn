@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://ddl4amdw1sgc8"]
+
+[ext_resource type="Script" uid="uid://b7e2hben16khi" path="res://scripts/Ball.gd" id="1_x8fbi"]
+[ext_resource type="Texture2D" uid="uid://dwrevw2al38cx" path="res://images/BrownDot.png" id="2_ja1hk"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_41u45"]
+radius = 12.0
+
+[node name="Ball" type="RigidBody2D" unique_id=15260849]
+collision_layer = 2
+contact_monitor = true
+max_contacts_reported = 4
+script = ExtResource("1_x8fbi")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1601786948]
+texture = ExtResource("2_ja1hk")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=2058562821]
+shape = SubResource("CircleShape2D_41u45")
