@@ -133,7 +133,7 @@ func _generate_slots() -> void:
 
 	for i in range(SLOT_COUNT):
 		var slot = slot_scene.instantiate()
-		slot.position       = Vector2(board_origin.x + slot_width * 0.5 + i * slot_width, y)
+		slot.position       = Vector2(board_origin.x + slot_width * 0.25 + i * slot_width, y)
 		slot.resource_type  = SLOT_TYPES[i]
 		slot.slot_width     = slot_width
 		slot.slot_height    = SLOT_HEIGHT
