@@ -16,7 +16,7 @@ script = ExtResource("1_5wh6y")
 
 [node name="FillBar" type="ProgressBar" parent="Control" unique_id=989091035]
 layout_mode = 0
-offset_right = 1080.0
+offset_right = 540.0
 offset_bottom = 56.0
 step = 1.0
 
@@ -38,7 +38,7 @@ text = "+1/sec"
 
 [node name="NoEnergyFlash" type="ColorRect" parent="Control" unique_id=741351804]
 layout_mode = 0
-offset_right = 1080.0
+offset_right = 540.0
 offset_bottom = 56.0
 mouse_filter = 2
 color = Color(0.8901961, 0, 0, 0)

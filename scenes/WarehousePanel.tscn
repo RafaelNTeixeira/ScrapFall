@@ -1,0 +1,53 @@
+[gd_scene format=3 uid="uid://biav1n2qqyxv5"]
+
+[ext_resource type="Script" uid="uid://dwvq0dunqyih6" path="res://scripts/WarehouseUI.gd" id="1_3bh1b"]
+[ext_resource type="PackedScene" uid="uid://0cfhrbrhjljs" path="res://scenes/ResourceBar.tscn" id="2_3bh1b"]
+
+[node name="WarehousePanel" type="Control" unique_id=2115286960]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_3bh1b")
+
+[node name="TitleLabel" type="Label" parent="." unique_id=1770693474]
+layout_mode = 0
+offset_right = 540.0
+offset_bottom = 49.0
+text = "Warehouse"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CopperBar" parent="." unique_id=1592509868 instance=ExtResource("2_3bh1b")]
+layout_mode = 0
+offset_top = 72.0
+offset_bottom = 190.0
+
+[node name="SteelBar" parent="." unique_id=2101834499 instance=ExtResource("2_3bh1b")]
+layout_mode = 0
+offset_top = 202.0
+offset_bottom = 320.0
+resource_type = "Steel"
+
+[node name="GlassBar" parent="." unique_id=241767352 instance=ExtResource("2_3bh1b")]
+layout_mode = 0
+offset_top = 333.0
+offset_bottom = 451.0
+resource_type = "Glass"
+
+[node name="WoodBar" parent="." unique_id=2037759016 instance=ExtResource("2_3bh1b")]
+layout_mode = 0
+offset_top = 465.0
+offset_right = 539.0
+offset_bottom = 583.0
+resource_type = "Wood"
+
+[node name="GoldLabel" type="Label" parent="." unique_id=1227813895]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 608.0
+offset_right = 104.0
+offset_bottom = 631.0
+text = "GoldLabel"

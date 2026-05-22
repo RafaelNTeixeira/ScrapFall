@@ -1,0 +1,86 @@
+[gd_scene format=3 uid="uid://chf23gce4pwdf"]
+
+[ext_resource type="Script" uid="uid://dod2nobirxbhk" path="res://scripts/TabNavigator.gd" id="1_3dw7a"]
+[ext_resource type="PackedScene" uid="uid://biav1n2qqyxv5" path="res://scenes/WarehousePanel.tscn" id="2_08dki"]
+
+[node name="TabNavigator" type="Control" unique_id=1012297485]
+layout_mode = 3
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -80.0
+grow_horizontal = 2
+grow_vertical = 0
+script = ExtResource("1_3dw7a")
+
+[node name="TabBar" type="HBoxContainer" parent="." unique_id=653799686]
+layout_mode = 0
+offset_right = 541.0
+offset_bottom = 80.0
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="BtnWarehouse" type="Button" parent="TabBar" unique_id=2130868384]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Warehouse"
+
+[node name="BtnBoard" type="Button" parent="TabBar" unique_id=64228727]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Board"
+
+[node name="BtnShipping" type="Button" parent="TabBar" unique_id=2135231738]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Shipping"
+
+[node name="BtnShop" type="Button" parent="TabBar" unique_id=1448608533]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Shop"
+
+[node name="BtnSettings" type="Button" parent="TabBar" unique_id=2082704677]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Settings"
+
+[node name="Panels" type="Control" parent="." unique_id=1927764689]
+anchors_preset = 0
+offset_top = -41.0
+offset_right = 540.0
+offset_bottom = -1.0
+mouse_filter = 1
+
+[node name="WarehousePanel" parent="Panels" unique_id=2115286960 instance=ExtResource("2_08dki")]
+layout_mode = 1
+offset_top = -775.0
+pivot_offset = Vector2(0, 80)
+
+[node name="BoardPanel" type="Control" parent="Panels" unique_id=1108239978]
+anchors_preset = 0
+offset_top = -775.0
+offset_right = 540.0
+offset_bottom = 40.0
+
+[node name="ShippingPanel" type="Label" parent="Panels" unique_id=1627672269]
+layout_mode = 0
+offset_top = -775.0
+offset_right = 540.0
+offset_bottom = 41.0
+text = "Shipping - coming soon"
+
+[node name="ShopPanel" type="Label" parent="Panels" unique_id=1579446302]
+layout_mode = 0
+offset_top = -775.0
+offset_right = 540.0
+offset_bottom = 41.0
+text = "Shop - coming soon"
+
+[node name="SettingsPanel" type="Label" parent="Panels" unique_id=1184281326]
+layout_mode = 0
+offset_top = -775.0
+offset_right = 540.0
+offset_bottom = 40.0
+text = "Settings - coming soon"

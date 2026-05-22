@@ -185,7 +185,7 @@ func _add_wall(pos: Vector2, size: Vector2) -> void:
 # -----------------------------------------------------------------------------
 # Input — tap anywhere to drop a ball (clamped to board X range)
 # -----------------------------------------------------------------------------
-func _input(event: InputEvent) -> void:
+func _unhandled_input(event: InputEvent) -> void:
 	var pressed: bool = false
 	var tap_x:   float = 0.0
 
