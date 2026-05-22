@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://cfbn3b32dmmfj"]
+
+[ext_resource type="Script" uid="uid://byipht38yniba" path="res://scripts/AutoDropper.gd" id="1_hdipk"]
+
+[node name="AutoDropper" type="Node2D" unique_id=1871084030]
+script = ExtResource("1_hdipk")

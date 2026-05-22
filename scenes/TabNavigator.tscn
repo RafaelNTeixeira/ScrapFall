@@ -70,6 +70,7 @@ offset_top = -775.0
 offset_right = 540.0
 offset_bottom = 41.0
 text = "Shipping - coming soon"
+horizontal_alignment = 1
 
 [node name="ShopPanel" type="Label" parent="Panels" unique_id=1579446302]
 layout_mode = 0
@@ -77,6 +78,7 @@ offset_top = -775.0
 offset_right = 540.0
 offset_bottom = 41.0
 text = "Shop - coming soon"
+horizontal_alignment = 1
 
 [node name="SettingsPanel" type="Label" parent="Panels" unique_id=1184281326]
 layout_mode = 0
@@ -84,3 +86,4 @@ offset_top = -775.0
 offset_right = 540.0
 offset_bottom = 40.0
 text = "Settings - coming soon"
+horizontal_alignment = 1

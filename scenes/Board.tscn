@@ -4,9 +4,11 @@
 [ext_resource type="PackedScene" uid="uid://bchac0ccpmxwo" path="res://scenes/Peg.tscn" id="2_xdl3i"]
 [ext_resource type="PackedScene" uid="uid://ddl4amdw1sgc8" path="res://scenes/Ball.tscn" id="3_wlyqt"]
 [ext_resource type="PackedScene" uid="uid://dsdi1w8yvvikt" path="res://scenes/Slot.tscn" id="4_kqf1l"]
+[ext_resource type="PackedScene" uid="uid://cfbn3b32dmmfj" path="res://scenes/AutoDropper.tscn" id="5_xdl3i"]
 
 [node name="Board" type="Node2D" unique_id=1036975276]
 script = ExtResource("1_w6jgk")
 peg_scene = ExtResource("2_xdl3i")
 ball_scene = ExtResource("3_wlyqt")
 slot_scene = ExtResource("4_kqf1l")
+auto_dropper_scene = ExtResource("5_xdl3i")

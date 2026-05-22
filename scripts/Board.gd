@@ -59,6 +59,7 @@ const SLOT_TYPES: Array[String] = ["Wood", "Steel", "Gold", "Glass", "Copper"]
 # Ready
 # -----------------------------------------------------------------------------
 func _ready() -> void:
+	add_to_group("board")   # SaveManager uses this to find the Board
 	_calculate_board_origin()
 	_generate_pegs()
 	_generate_slots()
@@ -258,3 +259,39 @@ func get_peg(col: int, row: int) -> Node2D:
 ## Returns the Auto-Dropper drop line Y for placing auto-droppers.
 func auto_dropper_y() -> float:
 	return drop_line_y()
+
+# -----------------------------------------------------------------------------
+# Auto-Dropper placement (Phase 3)
+# -----------------------------------------------------------------------------
+@export var auto_dropper_scene: PackedScene   ## res://scenes/AutoDropper.tscn
+
+## Placed droppers — persisted as X positions in SaveManager (Phase 3)
+var auto_droppers: Array = []
+
+## Called from upgrade UI when player buys and places a dropper
+func spawn_auto_dropper(x_pos: float) -> void:
+	if GameManager.auto_dropper_count >= GameManager.MAX_AUTO_DROPPERS:
+		return
+	if auto_dropper_scene == null:
+		push_error("Board: auto_dropper_scene not assigned in Inspector.")
+		return
+
+	var dropper = auto_dropper_scene.instantiate()
+	dropper.position = Vector2(clampf(x_pos, board_origin.x,
+		board_origin.x + (COLS_ODD - 1) * PEG_SPACING_X), drop_line_y())
+	dropper.set_board(self)
+	add_child(dropper)
+	auto_droppers.append(dropper)
+	GameManager.auto_dropper_count += 1
+
+## Returns X positions of all placed droppers — used by SaveManager
+func get_dropper_positions() -> Array:
+	var positions: Array = []
+	for d in auto_droppers:
+		positions.append(d.position.x)
+	return positions
+
+## Restores droppers from saved positions on load
+func restore_droppers(positions: Array) -> void:
+	for x in positions:
+		spawn_auto_dropper(float(x))
