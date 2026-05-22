@@ -52,7 +52,6 @@ func _process(delta: float) -> void:
 # Public save
 # -----------------------------------------------------------------------------
 func save() -> void:
-	print("Saving data")
 	var data: Dictionary = {
 		# Power meter
 		"power_meter":        GameManager.power_meter,
@@ -67,6 +66,10 @@ func save() -> void:
 		"has_energy_peg":     GameManager.has_energy_peg,
 		"has_gate":           GameManager.has_gate,
 		"auto_dropper_count": GameManager.auto_dropper_count,
+		# Upgrade states
+		"upgrades":           UpgradeManager.get_save_data(),
+		# Gate anchor pegs
+		"gate":               _get_gate_manager().get_save_data() if _get_gate_manager() else {},
 		# Auto-dropper positions
 		"dropper_positions":  _get_board().get_dropper_positions() if _get_board() else [],
 		# Offline timestamp — always written last so it's as fresh as possible
@@ -85,7 +88,6 @@ func save() -> void:
 # -----------------------------------------------------------------------------
 func _load_raw() -> Dictionary:
 	if not FileAccess.file_exists(SAVE_PATH):
-		print("Failed file access")
 		return {}
 
 	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
@@ -109,7 +111,6 @@ func _get_board() -> Node:
 	return boards[0] if not boards.is_empty() else null
 
 func _apply_to_game_manager(data: Dictionary) -> void:
-	print("Applying saved state")
 	if data.has("power_meter"):
 		GameManager.power_meter        = float(data["power_meter"])
 	if data.has("passive_regen_rate"):
@@ -135,6 +136,10 @@ func _apply_to_game_manager(data: Dictionary) -> void:
 	# Dropper positions restored after Board is ready via call_deferred
 	if data.has("dropper_positions") and not data["dropper_positions"].is_empty():
 		call_deferred("_restore_droppers", data["dropper_positions"])
+	if data.has("upgrades"):
+		UpgradeManager.apply_save_data(data["upgrades"])
+	if data.has("gate") and not data["gate"].is_empty():
+		call_deferred("_restore_gate", data["gate"])
 
 # -----------------------------------------------------------------------------
 # Wipe save — useful for testing or a "reset" button in Settings
@@ -142,6 +147,17 @@ func _apply_to_game_manager(data: Dictionary) -> void:
 func delete_save() -> void:
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(SAVE_PATH)
+
+func _get_gate_manager() -> Node:
+	var board := _get_board()
+	if board and board.has_node("GateManager"):
+		return board.get_node("GateManager")
+	return null
+
+func _restore_gate(data: Dictionary) -> void:
+	var gm := _get_gate_manager()
+	if gm and gm.has_method("restore_from_save"):
+		gm.restore_from_save(data)
 
 func _restore_droppers(positions: Array) -> void:
 	var board := _get_board()

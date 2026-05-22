@@ -59,7 +59,8 @@ const SLOT_TYPES: Array[String] = ["Wood", "Steel", "Gold", "Glass", "Copper"]
 # Ready
 # -----------------------------------------------------------------------------
 func _ready() -> void:
-	add_to_group("board")   # SaveManager uses this to find the Board
+	add_to_group("board")
+	call_deferred("_ready_upgrade_hooks")   # SaveManager uses this to find the Board
 	_calculate_board_origin()
 	_generate_pegs()
 	_generate_slots()
@@ -133,7 +134,7 @@ func _generate_slots() -> void:
 
 	for i in range(SLOT_COUNT):
 		var slot = slot_scene.instantiate()
-		slot.position       = Vector2(board_origin.x + slot_width * 0.25 + i * slot_width, y)
+		slot.position       = Vector2(board_origin.x + slot_width * 0.5 + i * slot_width, y)
 		slot.resource_type  = SLOT_TYPES[i]
 		slot.slot_width     = slot_width
 		slot.slot_height    = SLOT_HEIGHT
@@ -154,8 +155,8 @@ func _generate_walls() -> void:
 	var wall_mid_y:  float = wall_top + wall_height * 0.5
 
 	# Board left and right X edges
-	var board_left:  float = board_origin.x - (0.1 * PEG_SPACING_X)
-	var board_right: float = board_origin.x + (COLS_ODD - 0.9) * PEG_SPACING_X
+	var board_left:  float = board_origin.x
+	var board_right: float = board_origin.x + (COLS_ODD - 1) * PEG_SPACING_X
 
 	# Left wall — inner face flush with the board left edge
 	_add_wall(
@@ -200,6 +201,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		tap_x   = event.position.x
 
 	if pressed:
+		# Placement mode intercepts taps before normal drop logic
+		if _handle_placement_tap(Vector2(tap_x, 0.0)):
+			return
 		_try_drop_ball(tap_x)
 
 ## Spawns a ball at the tap X position (clamped inside the board),
@@ -295,3 +299,83 @@ func get_dropper_positions() -> Array:
 func restore_droppers(positions: Array) -> void:
 	for x in positions:
 		spawn_auto_dropper(float(x))
+
+# -----------------------------------------------------------------------------
+# Upgrade placement mode (Phase 4)
+# -----------------------------------------------------------------------------
+var _placement_mode: bool   = false
+var _pending_upgrade: String = ""
+
+@onready var _gate_manager: Node = $GateManager if has_node("GateManager") else null
+
+func _ready_upgrade_hooks() -> void:
+	UpgradeManager.placement_mode_started.connect(_on_placement_started)
+	UpgradeManager.placement_mode_cancelled.connect(_on_placement_cancelled)
+	UpgradeManager.upgrade_purchased.connect(_on_upgrade_purchased)
+
+func _on_placement_started(upgrade_id: String) -> void:
+	_placement_mode  = true
+	_pending_upgrade = upgrade_id
+
+func _on_placement_cancelled() -> void:
+	_placement_mode  = false
+	_pending_upgrade = ""
+
+func _on_upgrade_purchased(upgrade_id: String) -> void:
+	if upgrade_id == "dropper_speed":
+		for dropper in auto_droppers:
+			if dropper.has_method("set_drop_interval"):
+				dropper.set_drop_interval(3.0)
+
+## Routes a board tap during placement mode to the correct handler.
+## Called from _unhandled_input before the normal drop logic.
+func _handle_placement_tap(tap_pos: Vector2) -> bool:
+	if not _placement_mode:
+		return false
+
+	match _pending_upgrade:
+		"splitter_peg", "energy_peg":
+			var peg = _peg_at_screen_pos(tap_pos)
+			if peg != null:
+				var peg_type = Peg.PegType.SPLITTER if _pending_upgrade == "splitter_peg" 							   else Peg.PegType.ENERGY
+				peg.set_peg_type(peg_type)
+				# Sync flag to GameManager
+				if _pending_upgrade == "splitter_peg":
+					GameManager.has_splitter_peg = true
+				else:
+					GameManager.has_energy_peg = true
+				UpgradeManager.confirm_placement(_pending_upgrade)
+				_placement_mode  = false
+				_pending_upgrade = ""
+			return true
+
+		"gate":
+			if _gate_manager != null:
+				var peg = _peg_at_screen_pos(tap_pos)
+				if peg != null:
+					_gate_manager.on_peg_tapped(peg)
+					if not UpgradeManager.pending_placement == "gate":
+						_placement_mode  = false
+						_pending_upgrade = ""
+			return true
+
+		"auto_dropper_1", "auto_dropper_2":
+			# Place dropper at tap X, clamped to drop line
+			spawn_auto_dropper(tap_pos.x)
+			UpgradeManager.confirm_placement(_pending_upgrade)
+			_placement_mode  = false
+			_pending_upgrade = ""
+			return true
+
+	return false
+
+## Returns the nearest Peg to a screen position within a snap radius.
+func _peg_at_screen_pos(pos: Vector2, snap_radius: float = 35.0) -> Node:
+	var best_peg:  Node  = null
+	var best_dist: float = snap_radius
+	for peg in all_pegs:
+		var d: float = peg.global_position.distance_to(pos)
+		if d < best_dist:
+			best_dist = d
+			best_peg  = peg
+	return best_peg

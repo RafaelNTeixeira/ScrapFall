@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://dod2nobirxbhk" path="res://scripts/TabNavigator.gd" id="1_3dw7a"]
 [ext_resource type="PackedScene" uid="uid://biav1n2qqyxv5" path="res://scenes/WarehousePanel.tscn" id="2_08dki"]
+[ext_resource type="Script" uid="uid://bpd0o8qgeefyw" path="res://scripts/UpgradeUI.gd" id="3_v0bqb"]
 
 [node name="TabNavigator" type="Control" unique_id=1012297485]
 layout_mode = 3
@@ -63,6 +64,14 @@ anchors_preset = 0
 offset_top = -775.0
 offset_right = 540.0
 offset_bottom = 40.0
+
+[node name="UpgradeUI" type="Control" parent="Panels/BoardPanel" unique_id=1936437769]
+anchors_preset = 0
+offset_top = 774.0
+offset_right = 539.0
+offset_bottom = 814.0
+mouse_filter = 1
+script = ExtResource("3_v0bqb")
 
 [node name="ShippingPanel" type="Label" parent="Panels" unique_id=1627672269]
 layout_mode = 0
