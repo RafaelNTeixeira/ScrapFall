@@ -11,7 +11,7 @@
 #
 # Each AutoDropper:
 #   • Drops a ball every DROP_INTERVAL seconds
-#   • Costs the same energy as a manual drop (-10)
+#   • Does NOT consume energy — fires on its own timer
 #   • Stops when the power meter is empty
 #   • Is saved/restored as an X position in the save file
 # =============================================================================
@@ -31,19 +31,16 @@ func _ready() -> void:
 	_board = get_parent()
 
 func _process(delta: float) -> void:
-	if not GameManager.can_drop():
-		return
-
 	_timer += delta
 	if _timer >= drop_interval:
 		_timer = 0.0
 		_drop()
 
 func _drop() -> void:
-	if _board == null or not _board.has_method("_try_drop_ball"):
+	if _board == null or not _board.has_method("spawn_ball_free"):
 		return
-	# Use the board's existing drop logic — energy cost included
-	_board._try_drop_ball(global_position.x)
+	# Free spawn — auto-droppers don't consume energy per the GDD
+	_board.spawn_ball_free(global_position.x)
 
 # -----------------------------------------------------------------------------
 # Called by Board when placing this dropper

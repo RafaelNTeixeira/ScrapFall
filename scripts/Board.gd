@@ -191,18 +191,21 @@ func _unhandled_input(event: InputEvent) -> void:
 	var pressed: bool = false
 	var tap_x:   float = 0.0
 
+	var tap_pos: Vector2 = Vector2.ZERO
 	if event is InputEventScreenTouch and event.pressed:
 		pressed = true
 		tap_x   = event.position.x
+		tap_pos = event.position
 	elif event is InputEventMouseButton \
 			and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
 		pressed = true
 		tap_x   = event.position.x
+		tap_pos = event.position
 
 	if pressed:
 		# Placement mode intercepts taps before normal drop logic
-		if _handle_placement_tap(Vector2(tap_x, 0.0)):
+		if _handle_placement_tap(tap_pos):
 			return
 		_try_drop_ball(tap_x)
 
@@ -312,14 +315,22 @@ func _ready_upgrade_hooks() -> void:
 	UpgradeManager.placement_mode_started.connect(_on_placement_started)
 	UpgradeManager.placement_mode_cancelled.connect(_on_placement_cancelled)
 	UpgradeManager.upgrade_purchased.connect(_on_upgrade_purchased)
+	UpgradeManager.placement_confirmed.connect(_on_placement_confirmed)
 
 func _on_placement_started(upgrade_id: String) -> void:
 	_placement_mode  = true
 	_pending_upgrade = upgrade_id
+	_highlight_for_mode(upgrade_id)
 
 func _on_placement_cancelled() -> void:
 	_placement_mode  = false
 	_pending_upgrade = ""
+	_unhighlight_all_pegs()
+
+func _on_placement_confirmed(_upgrade_id: String) -> void:
+	_placement_mode  = false
+	_pending_upgrade = ""
+	_unhighlight_all_pegs()
 
 func _on_upgrade_purchased(upgrade_id: String) -> void:
 	if upgrade_id == "dropper_speed":
@@ -334,48 +345,99 @@ func _handle_placement_tap(tap_pos: Vector2) -> bool:
 		return false
 
 	match _pending_upgrade:
-		"splitter_peg", "energy_peg":
-			var peg = _peg_at_screen_pos(tap_pos)
+		"splitter_peg":
+			var peg = _peg_at_screen_pos(tap_pos, 35.0, true)
 			if peg != null:
-				var peg_type = Peg.PegType.SPLITTER if _pending_upgrade == "splitter_peg" 							   else Peg.PegType.ENERGY
-				peg.set_peg_type(peg_type)
-				# Sync flag to GameManager
-				if _pending_upgrade == "splitter_peg":
-					GameManager.has_splitter_peg = true
-				else:
-					GameManager.has_energy_peg = true
+				peg.set_peg_type(Peg.PegType.SPLITTER)
+				GameManager.has_splitter_peg = true
 				UpgradeManager.confirm_placement(_pending_upgrade)
 				_placement_mode  = false
 				_pending_upgrade = ""
+				_unhighlight_all_pegs()
+			return true
+		"energy_peg":
+			var peg = _peg_at_screen_pos(tap_pos)
+			if peg != null:
+				peg.set_peg_type(Peg.PegType.ENERGY)
+				GameManager.has_energy_peg = true
+				UpgradeManager.confirm_placement(_pending_upgrade)
+				_placement_mode  = false
+				_pending_upgrade = ""
+				_unhighlight_all_pegs()
 			return true
 
-		"gate":
+		"gate_1", "gate_2", "relocate_gate_1", "relocate_gate_2":
 			if _gate_manager != null:
 				var peg = _peg_at_screen_pos(tap_pos)
 				if peg != null:
 					_gate_manager.on_peg_tapped(peg)
-					if not UpgradeManager.pending_placement == "gate":
+					# GateManager calls confirm_placement when done;
+					# clear our local state when pending_placement is cleared
+					if UpgradeManager.pending_placement.is_empty():
 						_placement_mode  = false
 						_pending_upgrade = ""
+						_unhighlight_all_pegs()
 			return true
 
 		"auto_dropper_1", "auto_dropper_2":
-			# Place dropper at tap X, clamped to drop line
 			spawn_auto_dropper(tap_pos.x)
 			UpgradeManager.confirm_placement(_pending_upgrade)
 			_placement_mode  = false
 			_pending_upgrade = ""
 			return true
+		"relocate_dropper_1", "relocate_dropper_2":
+			var slot: int = 0 if _pending_upgrade == "relocate_dropper_1" else 1
+			if slot < auto_droppers.size():
+				var clamped_x: float = clampf(
+					tap_pos.x, board_origin.x,
+					board_origin.x + (COLS_ODD - 1) * PEG_SPACING_X
+				)
+				auto_droppers[slot].position = Vector2(clamped_x, drop_line_y())
+			# Stay in relocation mode until Cancel is pressed
+			return true
 
 	return false
 
-## Returns the nearest Peg to a screen position within a snap radius.
-func _peg_at_screen_pos(pos: Vector2, snap_radius: float = 35.0) -> Node:
+## Returns the nearest eligible Peg to a screen position.
+## splitter_only: restrict to middle rows (rows 3–8) per GDD.
+func _peg_at_screen_pos(pos: Vector2, snap_radius: float = 35.0, splitter_only: bool = false) -> Node:
 	var best_peg:  Node  = null
 	var best_dist: float = snap_radius
 	for peg in all_pegs:
+		if splitter_only and not peg.is_splitter_eligible():
+			continue
 		var d: float = peg.global_position.distance_to(pos)
 		if d < best_dist:
 			best_dist = d
 			best_peg  = peg
 	return best_peg
+
+## Spawns a ball without consuming energy — used by AutoDropper.
+func spawn_ball_free(x_pos: float) -> void:
+	var clamped_x: float = clampf(
+		x_pos,
+		board_origin.x,
+		board_origin.x + (COLS_ODD - 1) * PEG_SPACING_X
+	)
+	_spawn_ball(Vector2(clamped_x, drop_line_y()))
+
+# -----------------------------------------------------------------------------
+# Peg highlight helpers for placement mode
+# -----------------------------------------------------------------------------
+func _highlight_for_mode(upgrade_id: String) -> void:
+	match upgrade_id:
+		"splitter_peg":
+			for peg in all_pegs:
+				if peg.is_splitter_eligible():
+					peg.set_highlight(true)
+		"energy_peg":
+			for peg in all_pegs:
+				if peg.peg_type == Peg.PegType.NORMAL:
+					peg.set_highlight(true)
+		# Gate highlighting is handled by GateManager itself
+
+func _unhighlight_all_pegs() -> void:
+	for peg in all_pegs:
+		peg.set_highlight(false)
+		if peg.peg_type == Peg.PegType.NORMAL:
+			peg.mark_as_gate_anchor(false)

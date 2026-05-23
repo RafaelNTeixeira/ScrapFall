@@ -14,6 +14,7 @@ signal upgrade_purchased(upgrade_id: String)
 signal upgrade_failed(upgrade_id: String, reason: String)
 signal placement_mode_started(upgrade_id: String)
 signal placement_mode_cancelled()
+signal placement_confirmed(upgrade_id: String)
 
 # -----------------------------------------------------------------------------
 # Upgrade definitions
@@ -42,15 +43,26 @@ var UPGRADES: Dictionary = {
 		"purchased":    false,
 		"placed":       false,
 	},
-	"gate": {
+	"gate_1": {
 		"label":        "Gate",
-		"description":  "A ramp between two pegs guides balls left or right.",
+		"description":  "A ramp between two consecutive pegs guides balls left or right.",
 		"cost_res":     {"Wood": 100, "Glass": 100},
 		"cost_gold":    0.0,
-		"placement":    true,   # requires tapping 2 pegs on the board
+		"placement":    true,
 		"one_time":     true,
 		"purchased":    false,
 		"placed":       false,
+	},
+	"gate_2": {
+		"label":        "2nd Gate",
+		"description":  "A second ramp for more advanced ball routing.",
+		"cost_res":     {"Wood": 150, "Glass": 150},
+		"cost_gold":    0.0,
+		"placement":    true,
+		"one_time":     true,
+		"purchased":    false,
+		"placed":       false,
+		"requires":     "gate_1",
 	},
 	"storage_copper": {
 		"label":        "Copper Silo +200",
@@ -243,19 +255,33 @@ func confirm_placement(upgrade_id: String) -> void:
 	if UPGRADES.has(upgrade_id):
 		UPGRADES[upgrade_id]["placed"] = true
 	pending_placement = ""
+	emit_signal("placement_confirmed", upgrade_id)
 
 func cancel_placement() -> void:
-	# Refund the purchase since placement was cancelled
+	# No refund — the upgrade is already paid for and owned.
+	# Cancelling just dismisses the placement banner. The card in
+	# UpgradeUI will show "Tap board to place" so the player can
+	# re-enter placement mode by pressing that button again.
 	if pending_placement.is_empty():
 		return
-	var upg: Dictionary = UPGRADES[pending_placement]
-	for res in upg["cost_res"]:
-		GameManager.resources[res] += upg["cost_res"][res]
-	if upg["cost_gold"] > 0.0:
-		GameManager.award_gold(upg["cost_gold"])
-	upg["purchased"] = false
 	pending_placement = ""
 	emit_signal("placement_mode_cancelled")
+
+## Lets the player re-enter placement mode for an already-purchased upgrade.
+func reenter_placement(upgrade_id: String) -> void:
+	if not UPGRADES.has(upgrade_id):
+		return
+	var upg: Dictionary = UPGRADES[upgrade_id]
+	if not upg.get("purchased", false) or upg.get("placed", false):
+		return
+	pending_placement = upgrade_id
+	emit_signal("placement_mode_started", upgrade_id)
+
+## Enters relocation mode for a placed upgrade (dropper or gate).
+## upgrade_id: "relocate_dropper_1", "relocate_dropper_2", "relocate_gate_1", "relocate_gate_2"
+func enter_relocate_mode(upgrade_id: String) -> void:
+	pending_placement = upgrade_id
+	emit_signal("placement_mode_started", upgrade_id)
 
 # -----------------------------------------------------------------------------
 # Serialization — called by SaveManager

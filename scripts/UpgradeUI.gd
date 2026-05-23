@@ -1,30 +1,20 @@
 # =============================================================================
-# UpgradeUI.gd
-# Attach to: Control node — a floating panel on the Board tab
-#
-# Scene tree — all built in code, no manual children needed:
-#   UpgradeUI (Control)   ← this script
-#
-# A toggle button sits in the corner of the board view. Tapping it opens
-# a scrollable list of upgrade cards. Each card shows:
-#   • Name + description
-#   • Cost (resources or gold)
-#   • Status (Buy / Purchased / Needs placement / Can't afford)
+# UpgradeUI.gd — Control node on BoardPanel
+# All children built in code. Anchor to Full Rect, mouse_filter = Pass.
 # =============================================================================
 extends Control
 
-const PANEL_WIDTH:  float = 280.0
-const PANEL_HEIGHT: float = 420.0
-const CARD_HEIGHT:  float = 90.0
+const PANEL_WIDTH:  float = 300.0
+const PANEL_HEIGHT: float = 440.0
+const CARD_HEIGHT:  float = 110.0
 
-var _panel:      Control
-var _scroll:     ScrollContainer
-var _card_list:  VBoxContainer
-var _toggle_btn: Button
-var _is_open:    bool = false
-
-# Placement mode banner shown while waiting for board tap
+var _panel:           Control
+var _scroll:          ScrollContainer
+var _card_list:       VBoxContainer
+var _toggle_btn:      Button
+var _is_open:         bool = false
 var _placement_banner: Control
+var _banner_label:    Label
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -34,23 +24,24 @@ func _ready() -> void:
 	_build_panel()
 	_build_placement_banner()
 
-	UpgradeManager.upgrade_purchased.connect(_on_upgrade_changed)
+	UpgradeManager.upgrade_purchased.connect(_on_any_change)
 	UpgradeManager.upgrade_failed.connect(_on_upgrade_failed)
 	UpgradeManager.placement_mode_started.connect(_on_placement_started)
-	UpgradeManager.placement_mode_cancelled.connect(_on_placement_cancelled)
+	UpgradeManager.placement_mode_cancelled.connect(_on_placement_done)
+	UpgradeManager.placement_confirmed.connect(_on_placement_done)
 	GameManager.resource_collected.connect(func(_r, _n): _refresh_cards())
 	GameManager.gold_changed.connect(func(_g): _refresh_cards())
 
 # -----------------------------------------------------------------------------
-# Toggle button (bottom-right corner, above tab bar)
+# Toggle button
 # -----------------------------------------------------------------------------
 func _build_toggle_button() -> void:
 	_toggle_btn = Button.new()
-	_toggle_btn.text                  = "Upgrades"
-	_toggle_btn.custom_minimum_size   = Vector2(100.0, 40.0)
+	_toggle_btn.text                = "Upgrades"
+	_toggle_btn.custom_minimum_size = Vector2(100.0, 40.0)
 	_toggle_btn.set_anchor_and_offset(SIDE_RIGHT,  1.0, -12.0)
 	_toggle_btn.set_anchor_and_offset(SIDE_LEFT,   1.0, -112.0)
-	_toggle_btn.set_anchor_and_offset(SIDE_BOTTOM, 1.0, -84.0)   # above tab bar
+	_toggle_btn.set_anchor_and_offset(SIDE_BOTTOM, 1.0, -84.0)
 	_toggle_btn.set_anchor_and_offset(SIDE_TOP,    1.0, -124.0)
 	_toggle_btn.pressed.connect(_toggle_panel)
 	add_child(_toggle_btn)
@@ -78,12 +69,12 @@ func _build_panel() -> void:
 	vbox.add_child(title)
 
 	_scroll = ScrollContainer.new()
-	_scroll.custom_minimum_size        = Vector2(0.0, PANEL_HEIGHT - 60.0)
-	_scroll.size_flags_vertical        = Control.SIZE_EXPAND_FILL
+	_scroll.custom_minimum_size = Vector2(0.0, PANEL_HEIGHT - 60.0)
+	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(_scroll)
 
 	_card_list = VBoxContainer.new()
-	_card_list.size_flags_horizontal   = Control.SIZE_EXPAND_FILL
+	_card_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.add_child(_card_list)
 
 	_build_all_cards()
@@ -93,10 +84,10 @@ func _build_panel() -> void:
 # -----------------------------------------------------------------------------
 func _build_placement_banner() -> void:
 	_placement_banner = PanelContainer.new()
-	_placement_banner.set_anchor_and_offset(SIDE_LEFT,   0.0, 20.0)
-	_placement_banner.set_anchor_and_offset(SIDE_RIGHT,  1.0, -20.0)
-	_placement_banner.set_anchor_and_offset(SIDE_TOP,    0.0, 70.0)
-	_placement_banner.set_anchor_and_offset(SIDE_BOTTOM, 0.0, 120.0)
+	_placement_banner.set_anchor_and_offset(SIDE_LEFT,   0.0,  16.0)
+	_placement_banner.set_anchor_and_offset(SIDE_RIGHT,  1.0, -16.0)
+	_placement_banner.set_anchor_and_offset(SIDE_TOP,    0.0,  70.0)
+	_placement_banner.set_anchor_and_offset(SIDE_BOTTOM, 0.0, 124.0)
 	_placement_banner.visible      = false
 	_placement_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_placement_banner)
@@ -104,11 +95,10 @@ func _build_placement_banner() -> void:
 	var hbox := HBoxContainer.new()
 	_placement_banner.add_child(hbox)
 
-	var lbl := Label.new()
-	lbl.text                       = "Tap a peg on the board to place"
-	lbl.size_flags_horizontal      = Control.SIZE_EXPAND_FILL
-	lbl.add_theme_font_size_override("font_size", 13)
-	hbox.add_child(lbl)
+	_banner_label = Label.new()
+	_banner_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_banner_label.add_theme_font_size_override("font_size", 13)
+	hbox.add_child(_banner_label)
 
 	var cancel_btn := Button.new()
 	cancel_btn.text    = "Cancel"
@@ -121,47 +111,56 @@ func _build_placement_banner() -> void:
 func _build_all_cards() -> void:
 	for child in _card_list.get_children():
 		child.queue_free()
-
 	for upgrade_id in UpgradeManager.UPGRADES:
 		_card_list.add_child(_make_card(upgrade_id))
 
 func _make_card(upgrade_id: String) -> Control:
-	var upg:      Dictionary = UpgradeManager.UPGRADES[upgrade_id]
-	var card      := PanelContainer.new()
+	var upg: Dictionary = UpgradeManager.UPGRADES[upgrade_id]
+	var card := PanelContainer.new()
 	card.custom_minimum_size = Vector2(0.0, CARD_HEIGHT)
 	card.name                = "Card_" + upgrade_id
 
-	var vbox      := VBoxContainer.new()
+	var vbox := VBoxContainer.new()
 	vbox.name     = "VBoxContainer"
 	card.add_child(vbox)
 
-	# Title row
 	var title_lbl := Label.new()
 	title_lbl.text = upg["label"]
 	title_lbl.add_theme_font_size_override("font_size", 13)
-	title_lbl.name = "TitleLabel"
 	vbox.add_child(title_lbl)
 
-	# Description
-	var desc_lbl  := Label.new()
-	desc_lbl.text           = upg["description"]
-	desc_lbl.autowrap_mode  = TextServer.AUTOWRAP_WORD_SMART
+	var desc_lbl := Label.new()
+	desc_lbl.text          = upg["description"]
+	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc_lbl.add_theme_font_size_override("font_size", 11)
 	desc_lbl.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
 	vbox.add_child(desc_lbl)
 
-	# Cost row
-	var cost_lbl  := Label.new()
+	var cost_lbl := Label.new()
 	cost_lbl.text = _cost_string(upg)
 	cost_lbl.add_theme_font_size_override("font_size", 11)
 	cost_lbl.name = "CostLabel"
 	vbox.add_child(cost_lbl)
 
-	# Buy button
-	var btn       := Button.new()
-	btn.name       = "BuyButton"
-	btn.pressed.connect(func(): UpgradeManager.purchase(upgrade_id))
-	vbox.add_child(btn)
+	# Button row: Buy + optional Relocate
+	var btn_row := HBoxContainer.new()
+	btn_row.name = "HBoxContainer"
+	vbox.add_child(btn_row)
+
+	var buy_btn := Button.new()
+	buy_btn.name = "BuyButton"
+	buy_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	buy_btn.pressed.connect(func(): _on_card_button_pressed(upgrade_id))
+	btn_row.add_child(buy_btn)
+
+	# Relocate button — only for dropper and gate slots
+	if upgrade_id in ["auto_dropper_1", "auto_dropper_2", "gate_1", "gate_2"]:
+		var rel_btn := Button.new()
+		rel_btn.name = "RelocateButton"
+		rel_btn.text = "Relocate"
+		rel_btn.visible = false
+		rel_btn.pressed.connect(func(): _on_relocate_pressed(upgrade_id))
+		btn_row.add_child(rel_btn)
 
 	_update_card_state(card, upgrade_id)
 	return card
@@ -175,58 +174,102 @@ func _cost_string(upg: Dictionary) -> String:
 	return "Cost: " + ", ".join(parts) if not parts.is_empty() else "Free"
 
 func _update_card_state(card: Control, upgrade_id: String) -> void:
-	var upg: Dictionary = UpgradeManager.UPGRADES[upgrade_id]
-	var btn: Button     = card.get_node("VBoxContainer/BuyButton")
-	var purchased:  bool = upg.get("purchased", false)
-	var placed:     bool = upg.get("placed",    false)
-	var affordable: bool = UpgradeManager.can_afford(upgrade_id)
+	var upg: Dictionary      = UpgradeManager.UPGRADES[upgrade_id]
+	var btn_row: HBoxContainer = card.get_node("VBoxContainer/HBoxContainer")
+	var buy_btn: Button       = btn_row.get_node("BuyButton")
+	var purchased: bool       = upg.get("purchased", false)
+	var placed:    bool       = upg.get("placed",    false)
+	var affordable: bool      = UpgradeManager.can_afford(upgrade_id)
 
-	if purchased and (not upg.get("placement", false) or placed):
-		btn.text     = "Purchased"
-		btn.disabled = true
+	# Relocate button visibility
+	var rel_btn: Button = btn_row.get_node_or_null("RelocateButton")
+	if rel_btn:
+		rel_btn.visible = purchased and placed
+
+	if purchased and placed:
+		buy_btn.text     = "Purchased ✓"
+		buy_btn.disabled = true
+		buy_btn.modulate = Color(0.6, 0.9, 0.6)
 	elif purchased and not placed:
-		btn.text     = "Tap board to place"
-		btn.disabled = true
-		btn.modulate = Color(1.0, 0.85, 0.2)
+		buy_btn.text     = "Tap board to place"
+		buy_btn.disabled = false
+		buy_btn.modulate = Color(1.0, 0.85, 0.2)
 	elif not affordable:
-		btn.text     = "Buy"
-		btn.disabled = true
-		btn.modulate = Color(0.6, 0.6, 0.6)
+		buy_btn.text     = "Buy"
+		buy_btn.disabled = true
+		buy_btn.modulate = Color(0.5, 0.5, 0.5)
 	else:
-		btn.text     = "Buy"
-		btn.disabled = false
-		btn.modulate = Color.WHITE
+		buy_btn.text     = "Buy"
+		buy_btn.disabled = false
+		buy_btn.modulate = Color.WHITE
 
 func _refresh_cards() -> void:
 	for card in _card_list.get_children():
-		var upgrade_id: String = card.name.trim_prefix("Card_")
-		if UpgradeManager.UPGRADES.has(upgrade_id):
-			_update_card_state(card, upgrade_id)
+		var id: String = card.name.trim_prefix("Card_")
+		if UpgradeManager.UPGRADES.has(id):
+			_update_card_state(card, id)
+
+# -----------------------------------------------------------------------------
+# Button handlers
+# -----------------------------------------------------------------------------
+func _on_card_button_pressed(upgrade_id: String) -> void:
+	var upg: Dictionary = UpgradeManager.UPGRADES[upgrade_id]
+	if upg.get("purchased", false) and not upg.get("placed", false):
+		UpgradeManager.reenter_placement(upgrade_id)
+	else:
+		UpgradeManager.purchase(upgrade_id)
+
+func _on_relocate_pressed(upgrade_id: String) -> void:
+	# Derive the relocate mode ID
+	var mode: String = ""
+	match upgrade_id:
+		"auto_dropper_1": mode = "relocate_dropper_1"
+		"auto_dropper_2": mode = "relocate_dropper_2"
+		"gate_1":         mode = "relocate_gate_1"
+		"gate_2":         mode = "relocate_gate_2"
+	if not mode.is_empty():
+		UpgradeManager.enter_relocate_mode(mode)
+
+# -----------------------------------------------------------------------------
+# Signal handlers
+# -----------------------------------------------------------------------------
+func _on_any_change(_id: String = "") -> void:
+	_refresh_cards()
+
+func _on_upgrade_failed(_id: String, _reason: String) -> void:
+	pass  # Phase 9: toast notification
+
+func _on_placement_started(upgrade_id: String) -> void:
+	_panel.visible            = false
+	_is_open                  = false
+	_toggle_btn.text          = "Upgrades"
+	_placement_banner.visible = true
+
+	# Set contextual banner text
+	match upgrade_id:
+		"splitter_peg":
+			_banner_label.text = "Tap a peg in the middle rows to place the Splitter"
+		"energy_peg":
+			_banner_label.text = "Tap any peg to make it an Energy Peg"
+		"gate_1", "gate_2":
+			_banner_label.text = "Click on two consecutive pegs to insert a gate"
+		"auto_dropper_1", "auto_dropper_2":
+			_banner_label.text = "Tap the top of the board to place the Auto-Dropper"
+		"relocate_dropper_1", "relocate_dropper_2":
+			_banner_label.text = "Tap a new position to move the Auto-Dropper"
+		"relocate_gate_1", "relocate_gate_2":
+			_banner_label.text = "Click on two consecutive pegs to place the Gate"
+		_:
+			_banner_label.text = "Tap the board to place"
+
+func _on_placement_done(_id: String = "") -> void:
+	_placement_banner.visible = false
+	_refresh_cards()
 
 # -----------------------------------------------------------------------------
 # Toggle
 # -----------------------------------------------------------------------------
 func _toggle_panel() -> void:
-	_is_open   = not _is_open
+	_is_open       = not _is_open
 	_panel.visible = _is_open
 	_toggle_btn.text = "Close" if _is_open else "Upgrades"
-
-# -----------------------------------------------------------------------------
-# Signal handlers
-# -----------------------------------------------------------------------------
-func _on_upgrade_changed(_id: String) -> void:
-	_refresh_cards()
-
-func _on_upgrade_failed(_id: String, reason: String) -> void:
-	# TODO: show a brief toast notification (Phase 9 polish)
-	print("Upgrade failed: ", reason)
-
-func _on_placement_started(_id: String) -> void:
-	_panel.visible          = false
-	_is_open                = false
-	_toggle_btn.text        = "Upgrades"
-	_placement_banner.visible = true
-
-func _on_placement_cancelled() -> void:
-	_placement_banner.visible = false
-	_refresh_cards()

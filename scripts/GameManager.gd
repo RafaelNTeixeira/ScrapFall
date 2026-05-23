@@ -32,10 +32,10 @@ var _regen_accumulator:     float = 0.0
 const RESOURCE_TYPES: Array[String] = ["Copper", "Steel", "Glass", "Wood"]
 
 var resources: Dictionary = {
-	"Copper": 0,
-	"Steel":  0,
-	"Glass":  0,
-	"Wood":   0,
+	"Copper": 500,
+	"Steel":  500,
+	"Glass":  500,
+	"Wood":   500,
 }
 
 # Base caps — can be upgraded via resource spending
