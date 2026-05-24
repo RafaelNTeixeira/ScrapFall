@@ -484,7 +484,7 @@ func _highlight_for_mode(upgrade_id: String) -> void:
 					peg.set_highlight(true)
 		"energy_peg", "relocate_energy":
 			for peg in all_pegs:
-				if peg.peg_type == Peg.PegType.NORMAL:
+				if peg.is_energy_eligible():
 					peg.set_highlight(true)
 		"bouncy_peg", "relocate_bouncy":
 			for peg in all_pegs:

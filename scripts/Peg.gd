@@ -107,7 +107,7 @@ func _apply_visuals() -> void:
 func _base_color() -> Color:
 	match peg_type:
 		PegType.NORMAL:   return Color(1.0, 1.0, 1.0, 1.0)
-		PegType.ENERGY:   return Color(0.893, 0.728, 0.0, 1.0)
+		PegType.ENERGY:   return Color(0.8, 0.7, 0.0, 1.0)
 		PegType.SPLITTER: return Color(0.35, 0.80, 1.0)
 		PegType.BOUNCY:   return Color(0.4, 0.0, 0.4, 1.0)
 	return Color.WHITE
@@ -135,11 +135,14 @@ func set_highlight(active: bool) -> void:
 func is_gate_eligible() -> bool:
 	return peg_type == PegType.NORMAL
 
+func is_energy_eligible() -> bool:
+	return peg_type == PegType.NORMAL and peg_index.y >= 3 and peg_index.y <= 8
+
 func is_splitter_eligible() -> bool:
 	return peg_type == PegType.NORMAL and peg_index.y >= 3 and peg_index.y <= 8
 
 func is_bouncy_eligible() -> bool:
-	return peg_type == PegType.NORMAL
+	return peg_type == PegType.NORMAL and peg_index.y >= 3 and peg_index.y <= 8
 
 func mark_as_gate_anchor(active: bool) -> void:
 	if active:

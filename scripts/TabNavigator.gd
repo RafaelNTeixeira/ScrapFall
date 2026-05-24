@@ -111,6 +111,10 @@ func _ready() -> void:
 	_btn_shop.pressed.connect(func():      _switch_to(Tab.SHOP))
 	_btn_settings.pressed.connect(func():  _switch_to(Tab.SETTINGS))
 
+	# Attach ShippingUI to ShippingPanel
+	var shipping_ui: Node = load("res://scripts/ShippingUI.gd").new()
+	_panel_shipping.add_child(shipping_ui)
+
 	_switch_to(Tab.BOARD)
 
 func _switch_to(tab: Tab) -> void:

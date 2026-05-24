@@ -70,6 +70,8 @@ func save() -> void:
 		"upgrades":           UpgradeManager.get_save_data(),
 		# Gate anchor pegs
 		"gate":               _get_gate_manager().get_save_data() if _get_gate_manager() else {},
+		# Active contracts
+		"contracts":          ContractManager.get_save_data(),
 		# Auto-dropper positions
 		"dropper_positions":  _get_board().get_dropper_positions() if _get_board() else [],
 		# Offline timestamp — always written last so it's as fresh as possible
@@ -138,6 +140,8 @@ func _apply_to_game_manager(data: Dictionary) -> void:
 		call_deferred("_restore_droppers", data["dropper_positions"])
 	if data.has("upgrades"):
 		UpgradeManager.apply_save_data(data["upgrades"])
+	if data.has("contracts"):
+		ContractManager.apply_save_data(data["contracts"])
 	if data.has("gate") and not data["gate"].is_empty():
 		call_deferred("_restore_gate", data["gate"])
 
