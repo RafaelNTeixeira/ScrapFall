@@ -108,8 +108,8 @@ func _base_color() -> Color:
 	match peg_type:
 		PegType.NORMAL:   return Color(0.85, 0.85, 0.85)
 		PegType.ENERGY:   return Color(1.0,  0.82, 0.1)
-		PegType.SPLITTER: return Color(0.221, 0.466, 0.074, 1.0)
-		PegType.BOUNCY:   return Color(0.378, 0.0, 0.378, 1.0)
+		PegType.SPLITTER: return Color(0.35, 0.80, 1.0)
+		PegType.BOUNCY:   return Color(0.4, 0.0, 0.4, 1.0)
 	return Color.WHITE
 
 # -----------------------------------------------------------------------------
