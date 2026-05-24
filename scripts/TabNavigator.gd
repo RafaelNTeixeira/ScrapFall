@@ -115,6 +115,15 @@ func _ready() -> void:
 	var shipping_ui: Node = load("res://scripts/ShippingUI.gd").new()
 	_panel_shipping.add_child(shipping_ui)
 
+	# Inject LevelIndicator into BoardPanel
+	var level_ind: Node = load("res://scripts/LevelIndicator.gd").new()
+	_panel_board.add_child(level_ind)
+
+	# Inject LevelTransitionUI as CanvasLayer sibling
+	var trans_ui: Node = load("res://scripts/LevelTransitionUI.gd").new()
+	trans_ui.add_to_group("level_transition_ui")
+	get_parent().add_child(trans_ui)
+
 	_switch_to(Tab.BOARD)
 
 func _switch_to(tab: Tab) -> void:

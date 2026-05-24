@@ -79,8 +79,9 @@ func fulfill_contract(slot: int) -> bool:
 	var c: Dictionary = contracts[slot]
 	if not GameManager.spend_resources(c["resources"]):
 		return false
-	var gold: float = c["gold_reward"]
+	var gold: float = c["gold_reward"] * GameManager.contract_gold_multiplier
 	GameManager.award_gold(gold)
+	LevelManager.on_contract_fulfilled()
 	emit_signal("contract_fulfilled", slot, gold)
 	contracts[slot] = _generate_contract()
 	emit_signal("contract_updated", slot)
@@ -113,7 +114,7 @@ func sell_raw(amounts: Dictionary) -> float:
 		GameManager.resources[res] -= qty
 		# Emit the same signal ResourceBar listens to so the Warehouse UI updates
 		GameManager.resource_collected.emit(res, GameManager.resources[res])
-		var gold: float = qty * RAW_RATES.get(res, 0.5)
+		var gold: float = qty * RAW_RATES.get(res, 0.5) * GameManager.raw_rate_multiplier
 		total_gold += gold
 	if total_gold > 0.0:
 		GameManager.award_gold(total_gold)
@@ -121,7 +122,7 @@ func sell_raw(amounts: Dictionary) -> float:
 
 ## Gold you'd get for selling `amount` units of `resource` raw.
 func raw_gold_for(resource: String, amount: int) -> float:
-	return amount * RAW_RATES.get(resource, 0.5)
+	return amount * RAW_RATES.get(resource, 0.5) * GameManager.raw_rate_multiplier
 
 # -----------------------------------------------------------------------------
 # Contract generation
@@ -142,7 +143,7 @@ func _generate_contract() -> Dictionary:
 		resources[res]  = amount
 		raw_value      += amount * RAW_RATES.get(res, 0.5)
 
-	var duration: float = randf_range(CONTRACT_MIN_SECS, CONTRACT_MAX_SECS)
+	var duration: float = randf_range(CONTRACT_MIN_SECS, CONTRACT_MAX_SECS) + GameManager.contract_time_bonus
 
 	return {
 		"faction":        faction,

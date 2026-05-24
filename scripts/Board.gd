@@ -46,6 +46,8 @@ var all_pegs: Array = []
 
 ## Active balls currently on the board
 var active_balls: Array = []
+## Active hazard nodes (portals, moving pegs, black holes)
+var _hazards: Array = []
 
 ## Cached board origin (top-left peg position, centred on viewport)
 var board_origin: Vector2
@@ -107,7 +109,10 @@ func _generate_pegs() -> void:
 		var row_array: Array = []
 		var cols: int = COLS_ODD if (row % 2 == 0) else COLS_EVEN
 
+		var skip: Array = LevelManager.get_layout().get("skip_pegs", [])
 		for col in range(cols):
+			if [col, row] in skip:
+				continue
 			var peg = peg_scene.instantiate()
 			peg.position    = peg_world_pos(col, row)
 			peg.peg_index   = Vector2i(col, row)
@@ -258,7 +263,7 @@ func _on_bouncy_ball_hit(ball: RigidBody2D) -> void:
 		return
 	# Reverse vertical velocity and add a strong upward kick
 	var vel: Vector2 = ball.linear_velocity
-	ball.linear_velocity = Vector2(vel.x * 0.6, -abs(vel.y) * 2.0 - 200.0)
+	ball.linear_velocity = Vector2(vel.x * 0.6, -abs(vel.y) * 1.8 - 200.0)
 
 func _on_ball_removed(ball: RigidBody2D) -> void:
 	active_balls.erase(ball)
@@ -324,6 +329,7 @@ var _pending_upgrade: String = ""
 @onready var _gate_manager: Node = $GateManager if has_node("GateManager") else null
 
 func _ready_upgrade_hooks() -> void:
+	LevelManager.level_changed.connect(_on_level_changed)
 	UpgradeManager.placement_mode_started.connect(_on_placement_started)
 	UpgradeManager.placement_mode_cancelled.connect(_on_placement_cancelled)
 	UpgradeManager.upgrade_purchased.connect(_on_upgrade_purchased)
@@ -484,7 +490,7 @@ func _highlight_for_mode(upgrade_id: String) -> void:
 					peg.set_highlight(true)
 		"energy_peg", "relocate_energy":
 			for peg in all_pegs:
-				if peg.is_energy_eligible():
+				if peg.peg_type == Peg.PegType.NORMAL:
 					peg.set_highlight(true)
 		"bouncy_peg", "relocate_bouncy":
 			for peg in all_pegs:
@@ -504,3 +510,125 @@ func _unhighlight_all_pegs() -> void:
 		peg.set_highlight(false)
 		if peg.peg_type == Peg.PegType.NORMAL:
 			peg.mark_as_gate_anchor(false)
+
+# -----------------------------------------------------------------------------
+# Coordinate helper
+# -----------------------------------------------------------------------------
+## Converts fractional board-grid coords to world space.
+## grid_x 0.0 = leftmost peg column; grid_y 0.0 = top row.
+func grid_to_world(grid_x: float, grid_y: float) -> Vector2:
+	return Vector2(
+		board_origin.x + grid_x * PEG_SPACING_X,
+		board_origin.y + grid_y * PEG_SPACING_Y
+	)
+
+# -----------------------------------------------------------------------------
+# Hazard spawning (called after _generate_pegs)
+# -----------------------------------------------------------------------------
+func _spawn_hazards() -> void:
+	var layout: Dictionary = LevelManager.get_layout()
+	var hazard_defs: Array = layout.get("hazards", [])
+
+	# Group portal definitions by pair_id
+	var portal_groups: Dictionary = {}
+	for h in hazard_defs:
+		if h["type"] == "portal":
+			var pid: int = h.get("pair_id", 0)
+			if not portal_groups.has(pid):
+				portal_groups[pid] = []
+			portal_groups[pid].append(h)
+
+	for h in hazard_defs:
+		var world_pos: Vector2 = grid_to_world(h["grid_x"], h["grid_y"])
+		match h["type"]:
+			"portal":
+				var portal := _portal_scene_or_code(h, world_pos)
+				_hazards.append(portal)
+			"moving_peg":
+				var mp := _spawn_moving_peg(world_pos, h)
+				_hazards.append(mp)
+			"black_hole":
+				var bh := _spawn_black_hole(world_pos)
+				_hazards.append(bh)
+
+	# Link portal pairs
+	var portal_nodes: Dictionary = {}
+	for node in _hazards:
+		if node.get_script() and node.get_script().resource_path.contains("Portal"):
+			var pid: int = node.get("pair_id")
+			if not portal_nodes.has(pid):
+				portal_nodes[pid] = []
+			portal_nodes[pid].append(node)
+	for pid in portal_nodes:
+		var pair: Array = portal_nodes[pid]
+		if pair.size() == 2:
+			pair[0].partner = pair[1]
+			pair[1].partner = pair[0]
+
+func _portal_scene_or_code(h: Dictionary, world_pos: Vector2) -> Node:
+	var portal: Node
+	var portal_script: Script = load("res://scripts/Portal.gd")
+	var area := Area2D.new()
+	area.set_script(portal_script)
+	add_child(area)
+	area.global_position = world_pos
+	area.set("pair_id", h.get("pair_id", 0))
+	return area
+
+func _spawn_moving_peg(world_pos: Vector2, h: Dictionary) -> Node:
+	var mp_script: Script = load("res://scripts/MovingPeg.gd")
+	var body := StaticBody2D.new()
+	body.set_script(mp_script)
+	add_child(body)
+	body.global_position = world_pos
+	body.set("move_range", h.get("range", 80.0))
+	body.set("move_speed", h.get("speed", 45.0))
+	body.set("_origin", world_pos)
+	return body
+
+func _spawn_black_hole(world_pos: Vector2) -> Node:
+	var bh_script: Script = load("res://scripts/BlackHole.gd")
+	var area := Area2D.new()
+	area.set_script(bh_script)
+	add_child(area)
+	area.global_position = world_pos
+	return area
+
+# -----------------------------------------------------------------------------
+# Clear and reload for new level
+# -----------------------------------------------------------------------------
+func clear_board() -> void:
+	# Remove all balls
+	for ball in active_balls.duplicate():
+		if is_instance_valid(ball):
+			ball.queue_free()
+	active_balls.clear()
+	# Remove all pegs
+	for peg in all_pegs:
+		if is_instance_valid(peg):
+			peg.queue_free()
+	peg_grid.clear()
+	all_pegs.clear()
+	# Remove all hazards
+	for hazard in _hazards:
+		if is_instance_valid(hazard):
+			hazard.queue_free()
+	_hazards.clear()
+	# Remove auto-droppers
+	for dropper in auto_droppers:
+		if is_instance_valid(dropper):
+			dropper.queue_free()
+	auto_droppers.clear()
+	GameManager.auto_dropper_count = 0
+
+func reload_layout() -> void:
+	clear_board()
+	_calculate_board_origin()
+	_generate_pegs()
+	_generate_slots()
+	_generate_walls()
+	_spawn_hazards()
+
+func _on_level_changed(_new_level: int) -> void:
+	# Small delay so LevelManager state is fully settled first
+	call_deferred("reload_layout")

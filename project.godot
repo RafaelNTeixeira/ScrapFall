@@ -21,6 +21,8 @@ GameManager="*uid://rnwlnr75gpur"
 SaveManager="*uid://bmye37614em4w"
 AudioManager="*uid://cxabq1i4rr7xk"
 UpgradeManager="*uid://dvok5ay5cwxeu"
+BuffManager="*uid://cgpdbmp8goi1m"
+LevelManager="*uid://dld6xgpadgcon"
 ContractManager="*uid://cy7qb37quyuob"
 
 [display]

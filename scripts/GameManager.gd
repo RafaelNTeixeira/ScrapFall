@@ -32,10 +32,10 @@ var _regen_accumulator:     float = 0.0
 const RESOURCE_TYPES: Array[String] = ["Copper", "Steel", "Glass", "Wood"]
 
 var resources: Dictionary = {
-	"Copper": 500,
-	"Steel":  500,
-	"Glass":  500,
-	"Wood":   500,
+	"Copper": 0,
+	"Steel":  0,
+	"Glass":  0,
+	"Wood":   0,
 }
 
 # Base caps — can be upgraded via resource spending
@@ -49,7 +49,19 @@ var storage_caps: Dictionary = {
 # -----------------------------------------------------------------------------
 # Gold
 # -----------------------------------------------------------------------------
-var gold: float = 500.0
+var gold: float = 0.0
+
+# -----------------------------------------------------------------------------
+# Buff-driven modifiers (accumulate permanently across levels)
+# BuffManager._apply_to_game() mutates these. SaveManager persists them.
+# -----------------------------------------------------------------------------
+var power_meter_bonus:        float = 0.0   # "Expanded Battery"  +10 max energy/stack
+var dropper_speed_multiplier: float = 1.0   # "Clockwork Boost"   x0.95/stack
+var contract_gold_multiplier: float = 1.0   # "Trade Mastery"     +10%/stack
+var raw_rate_multiplier:      float = 1.0   # "Black Market"      +10%/stack
+var energy_peg_bonus:         float = 0.0   # "Supercharged Peg"  +1 energy/stack
+var contract_time_bonus:      float = 0.0   # "Extension Clause"  +60 sec/stack
+var portal_energy_bonus:      float = 0.0   # "Void Tap"          +3 energy/stack
 
 # -----------------------------------------------------------------------------
 # Upgrade Flags — prevent buying the same one-time upgrade twice
@@ -64,7 +76,7 @@ const MAX_AUTO_DROPPERS: int  = 2
 # _process — passive regen tick every second
 # -----------------------------------------------------------------------------
 func _process(delta: float) -> void:
-	if power_meter >= POWER_METER_MAX:
+	if power_meter >= effective_power_max():
 		return
 
 	_regen_accumulator += delta
@@ -77,6 +89,10 @@ func _process(delta: float) -> void:
 # -----------------------------------------------------------------------------
 # Power Meter API
 # -----------------------------------------------------------------------------
+## Returns the actual max energy including buff bonuses.
+func effective_power_max() -> float:
+	return POWER_METER_MAX + power_meter_bonus
+
 func can_drop() -> bool:
 	return power_meter >= DROP_COST
 
@@ -91,12 +107,12 @@ func consume_drop_energy() -> bool:
 
 ## Called by energy-peg logic, passive regen, and Overclock events.
 func _add_power(amount: float) -> void:
-	power_meter = minf(POWER_METER_MAX, power_meter + amount)
+	power_meter = minf(effective_power_max(), power_meter + amount)
 	emit_signal("power_meter_changed", power_meter)
 
 ## Public wrapper used by Peg and future upgrade systems.
 func award_energy_peg_hit() -> void:
-	_add_power(ENERGY_PEG_GAIN)
+	_add_power(ENERGY_PEG_GAIN + energy_peg_bonus)
 
 # -----------------------------------------------------------------------------
 # Resource Collection API
@@ -178,7 +194,7 @@ func apply_offline_progress(elapsed_seconds: float) -> void:
 		collect_resource(res_type, award)
 
 	# Also restore power meter fully after offline time
-	_add_power(POWER_METER_MAX)
+	_add_power(effective_power_max())
 
 	# Store elapsed for UI to show "You were away X hours" popup
 	last_offline_seconds = capped

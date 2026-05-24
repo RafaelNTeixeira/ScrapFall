@@ -13,8 +13,12 @@ var _cards:       Array = []   # Array of Dictionary per card slot
 # Liquidation section
 var _sliders:     Dictionary = {}   # res → HSlider
 var _slider_lbls: Dictionary = {}   # res → Label (shows amount + gold preview)
-var _total_lbl:   Label
-var _sell_btn:    Button
+var _total_lbl:          Label
+var _sell_btn:           Button
+# Level progress section
+var _level_progress_lbl: Label
+var _level_bar:          ProgressBar
+var _advance_btn:        Button
 
 # -----------------------------------------------------------------------------
 # _ready
@@ -45,9 +49,13 @@ func _ready() -> void:
 	_build_contract_cards(vbox)
 	_build_divider(vbox)
 	_build_liquidation(vbox)
+	_build_divider(vbox)
+	_build_level_progress(vbox)
 
 	# Connect signals
 	ContractManager.contract_updated.connect(_on_contract_updated)
+	LevelManager.progress_changed.connect(_on_level_progress_changed)
+	LevelManager.advance_available.connect(_on_advance_available)
 	ContractManager.contract_fulfilled.connect(_on_contract_fulfilled)
 	ContractManager.contract_expired.connect(_on_contract_expired)
 	GameManager.resource_collected.connect(func(_r, _n): _refresh_sliders())
@@ -206,9 +214,55 @@ func _build_liquidation(parent: Control) -> void:
 	bottom_row.add_child(_sell_btn)
 
 # -----------------------------------------------------------------------------
+# Level progress section
+# -----------------------------------------------------------------------------
+func _build_level_progress(parent: Control) -> void:
+	var lbl := Label.new()
+	lbl.text = "Level Progress"
+	lbl.add_theme_font_size_override("font_size", 13)
+	lbl.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+	parent.add_child(lbl)
+
+	_level_progress_lbl = Label.new()
+	_level_progress_lbl.add_theme_font_size_override("font_size", 12)
+	parent.add_child(_level_progress_lbl)
+
+	_level_bar = ProgressBar.new()
+	_level_bar.min_value       = 0
+	_level_bar.show_percentage = false
+	_level_bar.custom_minimum_size = Vector2(0.0, 10.0)
+	_level_bar.modulate        = Color(0.5, 1.0, 0.5)
+	parent.add_child(_level_bar)
+
+	_advance_btn = Button.new()
+	_advance_btn.text    = "Advance to Next Level →"
+	_advance_btn.visible = false
+	_advance_btn.modulate = Color(1.0, 0.85, 0.2)
+	_advance_btn.pressed.connect(_on_advance_pressed)
+	parent.add_child(_advance_btn)
+
+	_refresh_level_progress()
+
+func _refresh_level_progress() -> void:
+	if not _level_progress_lbl:
+		return
+	var done:     int = LevelManager.contracts_this_level
+	var needed:   int = LevelManager.contracts_required()
+	var gold_req: int = LevelManager.gold_required()
+	_level_progress_lbl.text = "Contracts: %d / %d   |   Gold needed: %d (have %d)" % [
+		done, needed, gold_req, int(GameManager.gold)
+	]
+	_level_bar.max_value = needed
+	_level_bar.value     = done
+	var can_go: bool = LevelManager.can_advance()
+	_advance_btn.visible  = can_go
+	_level_bar.modulate   = Color(1.0, 0.85, 0.2) if can_go else Color(0.5, 1.0, 0.5)
+
+# -----------------------------------------------------------------------------
 # _process — tick timer bars every frame
 # -----------------------------------------------------------------------------
 func _process(_delta: float) -> void:
+	_refresh_level_progress()
 	for i in ContractManager.SLOT_COUNT:
 		if i >= _cards.size():
 			break
@@ -305,6 +359,20 @@ func _on_sell_raw_pressed() -> void:
 	_refresh_sliders()
 
 # -----------------------------------------------------------------------------
+# Level signal handlers
+# -----------------------------------------------------------------------------
+func _on_level_progress_changed(_done: int, _needed: int) -> void:
+	_refresh_level_progress()
+
+func _on_advance_available(_available: bool) -> void:
+	_refresh_level_progress()
+
+func _on_advance_pressed() -> void:
+	# Find the LevelTransitionUI in the scene tree and show it
+	var ui: Node = get_tree().get_first_node_in_group("level_transition_ui")
+	if ui and ui.has_method("show_confirmation"):
+		ui.show_confirmation()
+
 # ContractManager signal handlers
 # -----------------------------------------------------------------------------
 func _on_contract_updated(slot: int) -> void:

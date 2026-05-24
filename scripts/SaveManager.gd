@@ -61,6 +61,14 @@ func save() -> void:
 		"storage_caps":       GameManager.storage_caps.duplicate(),
 		# Gold
 		"gold":               GameManager.gold,
+		# Buff modifiers
+		"power_meter_bonus":        GameManager.power_meter_bonus,
+		"dropper_speed_multiplier": GameManager.dropper_speed_multiplier,
+		"contract_gold_multiplier": GameManager.contract_gold_multiplier,
+		"raw_rate_multiplier":      GameManager.raw_rate_multiplier,
+		"energy_peg_bonus":         GameManager.energy_peg_bonus,
+		"contract_time_bonus":      GameManager.contract_time_bonus,
+		"portal_energy_bonus":      GameManager.portal_energy_bonus,
 		# Upgrade flags
 		"has_splitter_peg":   GameManager.has_splitter_peg,
 		"has_energy_peg":     GameManager.has_energy_peg,
@@ -70,6 +78,9 @@ func save() -> void:
 		"upgrades":           UpgradeManager.get_save_data(),
 		# Gate anchor pegs
 		"gate":               _get_gate_manager().get_save_data() if _get_gate_manager() else {},
+		# Level and buff progress
+		"level":              LevelManager.get_save_data(),
+		"buffs":              BuffManager.get_save_data(),
 		# Active contracts
 		"contracts":          ContractManager.get_save_data(),
 		# Auto-dropper positions
@@ -127,6 +138,10 @@ func _apply_to_game_manager(data: Dictionary) -> void:
 				GameManager.storage_caps[key] = int(data["storage_caps"][key])
 	if data.has("gold"):
 		GameManager.gold               = float(data["gold"])
+	for key in ["power_meter_bonus","dropper_speed_multiplier","contract_gold_multiplier",
+			"raw_rate_multiplier","energy_peg_bonus","contract_time_bonus","portal_energy_bonus"]:
+		if data.has(key):
+			GameManager.set(key, float(data[key]))
 	if data.has("has_splitter_peg"):
 		GameManager.has_splitter_peg   = bool(data["has_splitter_peg"])
 	if data.has("has_energy_peg"):
@@ -140,6 +155,11 @@ func _apply_to_game_manager(data: Dictionary) -> void:
 		call_deferred("_restore_droppers", data["dropper_positions"])
 	if data.has("upgrades"):
 		UpgradeManager.apply_save_data(data["upgrades"])
+	if data.has("buffs"):
+		BuffManager.apply_save_data(data["buffs"])
+		BuffManager.reapply_all()
+	if data.has("level"):
+		LevelManager.apply_save_data(data["level"])
 	if data.has("contracts"):
 		ContractManager.apply_save_data(data["contracts"])
 	if data.has("gate") and not data["gate"].is_empty():
