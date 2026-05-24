@@ -106,7 +106,7 @@ func _apply_visuals() -> void:
 
 func _base_color() -> Color:
 	match peg_type:
-		PegType.NORMAL:   return Color(0.85, 0.85, 0.85)
+		PegType.NORMAL:   return Color(1.0, 1.0, 1.0, 1.0)
 		PegType.ENERGY:   return Color(1.0,  0.82, 0.1)
 		PegType.SPLITTER: return Color(0.35, 0.80, 1.0)
 		PegType.BOUNCY:   return Color(0.4, 0.0, 0.4, 1.0)
