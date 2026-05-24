@@ -43,6 +43,16 @@ var UPGRADES: Dictionary = {
 		"purchased":    false,
 		"placed":       false,
 	},
+	"bouncy_peg": {
+		"label":        "Bouncy Peg",
+		"description":  "One peg launches balls upward on hit.",
+		"cost_res":     {"Steel": 80, "Glass": 120},
+		"cost_gold":    0.0,
+		"placement":    true,
+		"one_time":     true,
+		"purchased":    false,
+		"placed":       false,
+	},
 	"gate_1": {
 		"label":        "Gate",
 		"description":  "A ramp between two consecutive pegs guides balls left or right.",
@@ -140,6 +150,42 @@ var UPGRADES: Dictionary = {
 		"one_time":     true,
 		"purchased":    false,
 	},
+	"relocate_splitter": {
+		"label":        "Move Splitter Peg",
+		"description":  "Move the Splitter peg to a new position.",
+		"cost_res":     {},
+		"cost_gold":    0.0,
+		"placement":    true,
+		"one_time":     false,
+		"purchased":    false,
+		"placed":       false,
+		"requires":     "splitter_peg",
+		"hidden":       true,
+	},
+	"relocate_energy": {
+		"label":        "Move Energy Peg",
+		"description":  "Move the Energy peg to a new position.",
+		"cost_res":     {},
+		"cost_gold":    0.0,
+		"placement":    true,
+		"one_time":     false,
+		"purchased":    false,
+		"placed":       false,
+		"requires":     "energy_peg",
+		"hidden":       true,
+	},
+	"relocate_bouncy": {
+		"label":        "Move Bouncy Peg",
+		"description":  "Move the Bouncy peg to a new position.",
+		"cost_res":     {},
+		"cost_gold":    0.0,
+		"placement":    true,
+		"one_time":     false,
+		"purchased":    false,
+		"placed":       false,
+		"requires":     "bouncy_peg",
+		"hidden":       true,
+	},
 	"regen_rate_2": {
 		"label":        "Regen Boost II",
 		"description":  "Power meter regen: +2/s → +3/s.",
@@ -222,8 +268,8 @@ func purchase(upgrade_id: String) -> void:
 
 	emit_signal("upgrade_purchased", upgrade_id)
 
-	# Board-placement upgrades enter placement mode
-	if upg.get("placement", false) and not upg.get("placed", false):
+	# Board-placement upgrades enter placement mode (only when placement == true)
+	if upg.get("placement") == true and not upg.get("placed", false):
 		pending_placement = upgrade_id
 		emit_signal("placement_mode_started", upgrade_id)
 

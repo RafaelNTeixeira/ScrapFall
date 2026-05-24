@@ -6,13 +6,14 @@ class_name Peg
 
 signal energy_peg_hit()
 signal split_ball_requested(origin_pos: Vector2, original_velocity: Vector2)
+signal bouncy_ball_hit(ball: RigidBody2D)
 
-enum PegType { NORMAL, ENERGY, SPLITTER }
+enum PegType { NORMAL, ENERGY, SPLITTER, BOUNCY }
 
 @export var peg_type: PegType = PegType.NORMAL
 var peg_index: Vector2i = Vector2i.ZERO
 
-const HIT_COOLDOWN: float = 0.18
+const HIT_COOLDOWN: float = 0.25
 var _hit_cooldown_timer: float = 0.0
 var _balls_hit: Array = []
 
@@ -69,15 +70,22 @@ func _trigger_type_effect(ball: RigidBody2D) -> void:
 			emit_signal("energy_peg_hit")
 			_flash_color(Color(1.0, 0.95, 0.3))
 		PegType.SPLITTER:
-			emit_signal("split_ball_requested", position, ball.linear_velocity)
-			ball.on_split_event()
+			# Only split if this specific ball hasn't been split yet.
+			# This prevents chain-splits when the new ball immediately
+			# re-enters the same peg's hit area.
+			if not ball.get_meta("has_split", false):
+				ball.set_meta("has_split", true)
+				emit_signal("split_ball_requested", global_position, ball.linear_velocity)
 			_flash_color(Color(0.4, 0.85, 1.0))
+		PegType.BOUNCY:
+			emit_signal("bouncy_ball_hit", ball)
+			_flash_color(Color(0.238, 0.0, 0.294, 1.0))
 		PegType.NORMAL:
 			_flash_color(Color(1.1, 1.1, 1.1))
 
 func _flash_color(target: Color) -> void:
 	if _is_highlighted:
-		return  # don't interrupt highlight animation with a hit flash
+		return
 	var original: Color = _sprite.modulate
 	var tween := create_tween()
 	tween.tween_property(_sprite, "modulate", target,   0.05)
@@ -100,11 +108,12 @@ func _base_color() -> Color:
 	match peg_type:
 		PegType.NORMAL:   return Color(0.85, 0.85, 0.85)
 		PegType.ENERGY:   return Color(1.0,  0.82, 0.1)
-		PegType.SPLITTER: return Color(0.35, 0.80, 1.0)
+		PegType.SPLITTER: return Color(0.221, 0.466, 0.074, 1.0)
+		PegType.BOUNCY:   return Color(0.378, 0.0, 0.378, 1.0)
 	return Color.WHITE
 
 # -----------------------------------------------------------------------------
-# Highlight — pulsing glow used during upgrade placement mode
+# Highlight
 # -----------------------------------------------------------------------------
 func set_highlight(active: bool) -> void:
 	if active == _is_highlighted:
@@ -126,10 +135,11 @@ func set_highlight(active: bool) -> void:
 func is_gate_eligible() -> bool:
 	return peg_type == PegType.NORMAL
 
-## Only middle rows are valid for the Splitter so balls have room to diverge.
-## Row range 3–8 (inclusive) out of 0–11.
 func is_splitter_eligible() -> bool:
 	return peg_type == PegType.NORMAL and peg_index.y >= 3 and peg_index.y <= 8
+
+func is_bouncy_eligible() -> bool:
+	return peg_type == PegType.NORMAL
 
 func mark_as_gate_anchor(active: bool) -> void:
 	if active:

@@ -115,6 +115,7 @@ func _generate_pegs() -> void:
 			# Wire up the energy-peg signal before adding to tree
 			peg.energy_peg_hit.connect(_on_energy_peg_hit)
 			peg.split_ball_requested.connect(_on_split_ball_requested)
+			peg.bouncy_ball_hit.connect(_on_bouncy_ball_hit)
 
 			add_child(peg)
 			row_array.append(peg)
@@ -224,14 +225,18 @@ func _try_drop_ball(tap_x: float) -> void:
 
 	_spawn_ball(Vector2(clamped_x, drop_line_y()))
 
-func _spawn_ball(spawn_pos: Vector2, inherit_velocity: Vector2 = Vector2.ZERO) -> void:
+func _spawn_ball(spawn_pos: Vector2, inherit_velocity: Vector2 = Vector2.ZERO, is_split: bool = false) -> void:
 	var ball = ball_scene.instantiate()
-	ball.position          = spawn_pos
+	ball.position = spawn_pos
 	ball.ball_removed.connect(_on_ball_removed.bind(ball))
 
 	if inherit_velocity != Vector2.ZERO:
-		# Give split balls a nudge in the inherited direction
 		ball.set_meta("initial_velocity", inherit_velocity)
+
+	# Split-spawned balls must never trigger another split —
+	# stamp the meta before add_child so it's present before any collision fires.
+	if is_split:
+		ball.set_meta("has_split", true)
 
 	add_child(ball)
 	active_balls.append(ball)
@@ -244,9 +249,16 @@ func _on_energy_peg_hit() -> void:
 
 ## Spawns a second ball when the Splitter peg fires.
 func _on_split_ball_requested(origin_pos: Vector2, original_velocity: Vector2) -> void:
-	# Mirror horizontal velocity so the two balls diverge
 	var split_vel: Vector2 = Vector2(-original_velocity.x * 0.7, original_velocity.y * 0.7)
-	_spawn_ball(origin_pos + Vector2(0.0, 5.0), split_vel)
+	_spawn_ball(origin_pos + Vector2(0.0, 5.0), split_vel, true)
+
+## Launches the ball upward when a Bouncy peg is hit.
+func _on_bouncy_ball_hit(ball: RigidBody2D) -> void:
+	if not is_instance_valid(ball):
+		return
+	# Reverse vertical velocity and add a strong upward kick
+	var vel: Vector2 = ball.linear_velocity
+	ball.linear_velocity = Vector2(vel.x * 0.6, -abs(vel.y) * 2.0 - 200.0)
 
 func _on_ball_removed(ball: RigidBody2D) -> void:
 	active_balls.erase(ball)
@@ -365,6 +377,46 @@ func _handle_placement_tap(tap_pos: Vector2) -> bool:
 				_pending_upgrade = ""
 				_unhighlight_all_pegs()
 			return true
+		"bouncy_peg":
+			var peg = _peg_at_screen_pos(tap_pos)
+			if peg != null:
+				peg.set_peg_type(Peg.PegType.BOUNCY)
+				UpgradeManager.confirm_placement(_pending_upgrade)
+				_placement_mode  = false
+				_pending_upgrade = ""
+				_unhighlight_all_pegs()
+			return true
+		# Peg relocation — reset old peg to NORMAL then re-enter selection
+		"relocate_splitter":
+			var peg = _peg_at_screen_pos(tap_pos, 35.0, true)
+			if peg != null:
+				_reset_peg_of_type(Peg.PegType.SPLITTER)
+				peg.set_peg_type(Peg.PegType.SPLITTER)
+				UpgradeManager.confirm_placement(_pending_upgrade)
+				_placement_mode  = false
+				_pending_upgrade = ""
+				_unhighlight_all_pegs()
+			return true
+		"relocate_energy":
+			var peg = _peg_at_screen_pos(tap_pos)
+			if peg != null:
+				_reset_peg_of_type(Peg.PegType.ENERGY)
+				peg.set_peg_type(Peg.PegType.ENERGY)
+				UpgradeManager.confirm_placement(_pending_upgrade)
+				_placement_mode  = false
+				_pending_upgrade = ""
+				_unhighlight_all_pegs()
+			return true
+		"relocate_bouncy":
+			var peg = _peg_at_screen_pos(tap_pos)
+			if peg != null:
+				_reset_peg_of_type(Peg.PegType.BOUNCY)
+				peg.set_peg_type(Peg.PegType.BOUNCY)
+				UpgradeManager.confirm_placement(_pending_upgrade)
+				_placement_mode  = false
+				_pending_upgrade = ""
+				_unhighlight_all_pegs()
+			return true
 
 		"gate_1", "gate_2", "relocate_gate_1", "relocate_gate_2":
 			if _gate_manager != null:
@@ -426,15 +478,26 @@ func spawn_ball_free(x_pos: float) -> void:
 # -----------------------------------------------------------------------------
 func _highlight_for_mode(upgrade_id: String) -> void:
 	match upgrade_id:
-		"splitter_peg":
+		"splitter_peg", "relocate_splitter":
 			for peg in all_pegs:
 				if peg.is_splitter_eligible():
 					peg.set_highlight(true)
-		"energy_peg":
+		"energy_peg", "relocate_energy":
 			for peg in all_pegs:
 				if peg.peg_type == Peg.PegType.NORMAL:
 					peg.set_highlight(true)
+		"bouncy_peg", "relocate_bouncy":
+			for peg in all_pegs:
+				if peg.is_bouncy_eligible():
+					peg.set_highlight(true)
 		# Gate highlighting is handled by GateManager itself
+
+## Resets the first peg of a given type back to NORMAL (used for relocation).
+func _reset_peg_of_type(peg_type: Peg.PegType) -> void:
+	for peg in all_pegs:
+		if peg.peg_type == peg_type:
+			peg.set_peg_type(Peg.PegType.NORMAL)
+			return
 
 func _unhighlight_all_pegs() -> void:
 	for peg in all_pegs:

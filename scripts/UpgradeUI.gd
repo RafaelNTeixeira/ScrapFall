@@ -112,6 +112,9 @@ func _build_all_cards() -> void:
 	for child in _card_list.get_children():
 		child.queue_free()
 	for upgrade_id in UpgradeManager.UPGRADES:
+		# Skip hidden relocation entries — they appear as Relocate buttons on parent cards
+		if UpgradeManager.UPGRADES[upgrade_id].get("hidden", false):
+			continue
 		_card_list.add_child(_make_card(upgrade_id))
 
 func _make_card(upgrade_id: String) -> Control:
@@ -153,8 +156,8 @@ func _make_card(upgrade_id: String) -> Control:
 	buy_btn.pressed.connect(func(): _on_card_button_pressed(upgrade_id))
 	btn_row.add_child(buy_btn)
 
-	# Relocate button — only for dropper and gate slots
-	if upgrade_id in ["auto_dropper_1", "auto_dropper_2", "gate_1", "gate_2"]:
+	# Relocate button — for droppers, gates, and special pegs
+	if upgrade_id in ["auto_dropper_1", "auto_dropper_2", "gate_1", "gate_2", "splitter_peg", "energy_peg", "bouncy_peg"]:
 		var rel_btn := Button.new()
 		rel_btn.name = "RelocateButton"
 		rel_btn.text = "Relocate"
@@ -186,11 +189,15 @@ func _update_card_state(card: Control, upgrade_id: String) -> void:
 	if rel_btn:
 		rel_btn.visible = purchased and placed
 
-	if purchased and placed:
+	var needs_placement: bool = upg.get("placement") == true
+
+	if purchased and (not needs_placement or placed):
+		# Instant upgrades (no placement) and fully-placed upgrades both show Purchased
 		buy_btn.text     = "Purchased ✓"
 		buy_btn.disabled = true
 		buy_btn.modulate = Color(0.6, 0.9, 0.6)
-	elif purchased and not placed:
+	elif purchased and needs_placement and not placed:
+		# Paid but still needs a board tap to place
 		buy_btn.text     = "Tap board to place"
 		buy_btn.disabled = false
 		buy_btn.modulate = Color(1.0, 0.85, 0.2)
@@ -220,13 +227,15 @@ func _on_card_button_pressed(upgrade_id: String) -> void:
 		UpgradeManager.purchase(upgrade_id)
 
 func _on_relocate_pressed(upgrade_id: String) -> void:
-	# Derive the relocate mode ID
 	var mode: String = ""
 	match upgrade_id:
 		"auto_dropper_1": mode = "relocate_dropper_1"
 		"auto_dropper_2": mode = "relocate_dropper_2"
 		"gate_1":         mode = "relocate_gate_1"
 		"gate_2":         mode = "relocate_gate_2"
+		"splitter_peg":   mode = "relocate_splitter"
+		"energy_peg":     mode = "relocate_energy"
+		"bouncy_peg":     mode = "relocate_bouncy"
 	if not mode.is_empty():
 		UpgradeManager.enter_relocate_mode(mode)
 
@@ -253,6 +262,14 @@ func _on_placement_started(upgrade_id: String) -> void:
 			_banner_label.text = "Tap any peg to make it an Energy Peg"
 		"gate_1", "gate_2":
 			_banner_label.text = "Click on two consecutive pegs to insert a gate"
+		"bouncy_peg":
+			_banner_label.text = "Tap any peg to make it a Bouncy Peg"
+		"relocate_splitter":
+			_banner_label.text = "Tap a middle-row peg to move the Splitter"
+		"relocate_energy":
+			_banner_label.text = "Tap any peg to move the Energy Peg"
+		"relocate_bouncy":
+			_banner_label.text = "Tap any peg to move the Bouncy Peg"
 		"auto_dropper_1", "auto_dropper_2":
 			_banner_label.text = "Tap the top of the board to place the Auto-Dropper"
 		"relocate_dropper_1", "relocate_dropper_2":
