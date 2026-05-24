@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://bchac0ccpmxwo"]
 
 [ext_resource type="Script" uid="uid://jj1a8j7xpkqt" path="res://scripts/Peg.gd" id="1_mhmpc"]
-[ext_resource type="Texture2D" uid="uid://dwrevw2al38cx" path="res://images/BrownDot.png" id="2_focci"]
+[ext_resource type="Texture2D" uid="uid://bvqmw2amkcua1" path="res://images/WhiteDot.png" id="2_focci"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_tfw68"]
 
