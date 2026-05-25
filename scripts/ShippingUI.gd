@@ -368,10 +368,7 @@ func _on_advance_available(_available: bool) -> void:
 	_refresh_level_progress()
 
 func _on_advance_pressed() -> void:
-	# Find the LevelTransitionUI in the scene tree and show it
-	var ui: Node = get_tree().get_first_node_in_group("level_transition_ui")
-	if ui and ui.has_method("show_confirmation"):
-		ui.show_confirmation()
+	LevelManager.show_advance_ui_requested.emit()
 
 # ContractManager signal handlers
 # -----------------------------------------------------------------------------

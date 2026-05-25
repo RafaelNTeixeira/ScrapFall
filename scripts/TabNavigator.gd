@@ -119,10 +119,9 @@ func _ready() -> void:
 	var level_ind: Node = load("res://scripts/LevelIndicator.gd").new()
 	_panel_board.add_child(level_ind)
 
-	# Inject LevelTransitionUI as CanvasLayer sibling
-	var trans_ui: Node = load("res://scripts/LevelTransitionUI.gd").new()
-	trans_ui.add_to_group("level_transition_ui")
-	get_parent().add_child(trans_ui)
+	# Inject LevelTransitionUI after the current frame so the viewport
+	# is fully laid out — this is critical for anchor calculations to work.
+	call_deferred("_inject_level_transition_ui")
 
 	_switch_to(Tab.BOARD)
 
@@ -135,3 +134,9 @@ func _switch_to(tab: Tab) -> void:
 	# BoardPanel is always MOUSE_FILTER_IGNORE (set in _ready).
 	# Other panels are hidden when not active — Godot 4 never sends
 	# input to invisible controls, so no extra filtering needed.
+
+func _inject_level_transition_ui() -> void:
+	# LevelTransitionUI now extends Control — add it directly to UILayer
+	# (our parent) so it inherits the correct viewport rect for anchors.
+	var trans_ui: Node = load("res://scripts/LevelTransitionUI.gd").new()
+	get_parent().add_child(trans_ui)
