@@ -121,7 +121,6 @@ func _build_confirm_panel() -> void:
 
 func _refresh_confirm_text() -> void:
 	var next_level:   int    = LevelManager.current_level + 1
-	var gold_cost:    int    = LevelManager.gold_required()
 	var layout_idx:   int    = mini(next_level - 1, LevelManager.LAYOUTS.size() - 1)
 	var layout_name:  String = LevelManager.LAYOUTS[layout_idx].get("name", "Unknown")
 
@@ -138,8 +137,8 @@ func _refresh_confirm_text() -> void:
 	if title:
 		title.text = "Advance to Level %d?" % next_level
 	if body:
-		body.text  = "Next board: \"%s\"\nCost: %d Gold\n\nYou will choose a permanent buff." \
-					 % [layout_name, gold_cost]
+		body.text  = "Next board: \"%s\"\n\nComplete this level and you will\nchoose a permanent buff." \
+					 % [layout_name]
 
 # -----------------------------------------------------------------------------
 # Buff picker panel

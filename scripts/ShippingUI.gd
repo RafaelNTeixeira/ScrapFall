@@ -246,8 +246,8 @@ func _build_level_progress(parent: Control) -> void:
 func _refresh_level_progress() -> void:
 	if not _level_progress_lbl:
 		return
-	var done:     int = LevelManager.contracts_this_level
-	var needed:   int = LevelManager.contracts_required()
+	var done:   int = LevelManager.contracts_this_level
+	var needed: int = LevelManager.contracts_required()
 	var gold_req: int = LevelManager.gold_required()
 	_level_progress_lbl.text = "Contracts: %d / %d   |   Gold needed: %d (have %d)" % [
 		done, needed, gold_req, int(GameManager.gold)

@@ -62,11 +62,13 @@ const SLOT_TYPES: Array[String] = ["Wood", "Steel", "Gold", "Glass", "Copper"]
 # -----------------------------------------------------------------------------
 func _ready() -> void:
 	add_to_group("board")
-	call_deferred("_ready_upgrade_hooks")   # SaveManager uses this to find the Board
+	call_deferred("_ready_upgrade_hooks")
 	_calculate_board_origin()
 	_generate_pegs()
 	_generate_slots()
 	_generate_walls()
+	# Deferred so LevelManager save data is applied before hazards spawn
+	call_deferred("_spawn_hazards")
 
 # -----------------------------------------------------------------------------
 # Geometry helpers
@@ -538,12 +540,19 @@ func _spawn_hazards() -> void:
 				portal_groups[pid] = []
 			portal_groups[pid].append(h)
 
+	# Track portal nodes by pair_id directly — avoids unreliable script-path search
+	var spawned_portals: Dictionary = {}
+
 	for h in hazard_defs:
 		var world_pos: Vector2 = grid_to_world(h["grid_x"], h["grid_y"])
 		match h["type"]:
 			"portal":
 				var portal := _portal_scene_or_code(h, world_pos)
 				_hazards.append(portal)
+				var pid: int = h.get("pair_id", 0)
+				if not spawned_portals.has(pid):
+					spawned_portals[pid] = []
+				spawned_portals[pid].append(portal)
 			"moving_peg":
 				var mp := _spawn_moving_peg(world_pos, h)
 				_hazards.append(mp)
@@ -551,16 +560,9 @@ func _spawn_hazards() -> void:
 				var bh := _spawn_black_hole(world_pos)
 				_hazards.append(bh)
 
-	# Link portal pairs
-	var portal_nodes: Dictionary = {}
-	for node in _hazards:
-		if node.get_script() and node.get_script().resource_path.contains("Portal"):
-			var pid: int = node.get("pair_id")
-			if not portal_nodes.has(pid):
-				portal_nodes[pid] = []
-			portal_nodes[pid].append(node)
-	for pid in portal_nodes:
-		var pair: Array = portal_nodes[pid]
+	# Link portal pairs using directly tracked spawned_portals dictionary
+	for pid in spawned_portals:
+		var pair: Array = spawned_portals[pid]
 		if pair.size() == 2:
 			pair[0].partner = pair[1]
 			pair[1].partner = pair[0]

@@ -18,14 +18,13 @@ var contracts_this_level:   int = 0
 # Level requirements (scale with level)
 # -----------------------------------------------------------------------------
 func contracts_required() -> int:
-	return 3 + (current_level - 1) * 2   # 3, 5, 7, 9 …
+	return 3 + (current_level - 1) * 2   # 3, 5, 7, 9, ...
 
 func gold_required() -> int:
-	return 100 * current_level            # 100, 200, 300 …
+	return 100 * current_level            # 100, 200, 300, ...
 
 func can_advance() -> bool:
-	return contracts_this_level >= contracts_required() \
-		and GameManager.gold >= gold_required()
+	return contracts_this_level >= contracts_required() and GameManager.gold >= gold_required()
 
 # Called by ContractManager when a contract is fulfilled
 func on_contract_fulfilled() -> void:
@@ -37,14 +36,16 @@ func on_contract_fulfilled() -> void:
 # Perform level advance (called AFTER buff is chosen)
 # -----------------------------------------------------------------------------
 func advance(chosen_buff_id: String) -> void:
-	GameManager.spend_gold(gold_required())
 	BuffManager.apply_buff(chosen_buff_id)
 	current_level          += 1
 	contracts_this_level    = 0
 
-	# Reset resources but keep gold (minus the cost already deducted)
+	# Reset resources and gold
 	for res in GameManager.resources:
 		GameManager.resources[res] = 0
+		GameManager.emit_signal("resource_collected", res, 0)
+	GameManager.gold = 0.0
+	GameManager.emit_signal("gold_changed", 0.0)
 	GameManager.power_meter = GameManager.effective_power_max()
 
 	# Apply start-of-level buffs (Head Start, Hot Start, etc.)
