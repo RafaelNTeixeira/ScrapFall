@@ -46,7 +46,6 @@ func advance(chosen_buff_id: String) -> void:
 		GameManager.emit_signal("resource_collected", res, 0)
 	GameManager.gold = 0.0
 	GameManager.emit_signal("gold_changed", 0.0)
-	GameManager.power_meter = GameManager.effective_power_max()
 
 	# Apply start-of-level buffs (Head Start, Hot Start, etc.)
 	BuffManager.apply_level_start_buffs()
