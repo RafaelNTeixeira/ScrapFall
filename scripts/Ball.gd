@@ -29,7 +29,23 @@ const BALL_FRICTION:    float = 0.45    # rolling friction against pegs
 const LINEAR_DAMP_V:    float = 0.25    # tiny air-resistance drag
 const MAX_SPEED:        float = 820.0   # prevents tunnelling through thin pegs
 
-# Spawn nudge range — random horizontal push so balls don't fall straight
+# Ball skin → modulate colour. Kept here so Ball is self-contained.
+# Must stay in sync with ShopUI.SKINS colour values.
+const SKIN_COLORS: Dictionary = {
+	"default":     Color(0.72, 0.72, 0.72),
+	"copper_ball": Color(0.72, 0.45, 0.20),
+	"steel_ball":  Color(0.75, 0.78, 0.88),
+	"timber":      Color(0.60, 0.40, 0.20),
+	"crystal":     Color(0.50, 0.88, 1.00),
+	"neon_blue":   Color(0.15, 0.45, 1.00),
+	"toxic":       Color(0.20, 1.00, 0.30),
+	"lava":        Color(1.00, 0.22, 0.05),
+	"void":        Color(0.50, 0.00, 1.00),
+	"arctic":      Color(0.75, 0.95, 1.00),
+	"solar_gold":  Color(1.00, 0.85, 0.00),
+	"obsidian":    Color(0.15, 0.05, 0.25),
+	"prism":       Color(1.00, 0.45, 0.85),
+}
 const SPAWN_NUDGE_MIN:  float = -45.0
 const SPAWN_NUDGE_MAX:  float =  45.0
 const SPAWN_V_SPEED:    float =  60.0   # small downward push to start movement
@@ -73,6 +89,9 @@ func _ready() -> void:
 			randf_range(SPAWN_NUDGE_MIN, SPAWN_NUDGE_MAX),
 			SPAWN_V_SPEED
 		)
+
+	# Tint the sprite to match the active skin
+	_sprite.modulate = SKIN_COLORS.get(GameManager.active_skin, Color.WHITE)
 
 # -----------------------------------------------------------------------------
 # _physics_process — lifetime guard + speed cap

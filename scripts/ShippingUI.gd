@@ -136,11 +136,24 @@ func _make_contract_card(slot: int) -> Dictionary:
 	timer_bar.modulate        = Color(0.3, 0.8, 1.0)
 	vbox.add_child(timer_bar)
 
-	# Row 5: Fulfill button
+	# Row 5: Fulfill + token-reroll row
+	var action_row := HBoxContainer.new()
+	vbox.add_child(action_row)
+
 	var fulfill_btn := Button.new()
 	fulfill_btn.text = "Fulfill Contract"
+	fulfill_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	fulfill_btn.pressed.connect(func(): _on_fulfill_pressed(slot))
-	vbox.add_child(fulfill_btn)
+	action_row.add_child(fulfill_btn)
+
+	# Token reroll — visible only when the player holds at least one token
+	var token_btn := Button.new()
+	token_btn.text = "🔄"
+	token_btn.tooltip_text = "Spend a Refresh Token to reroll this contract"
+	token_btn.custom_minimum_size = Vector2(38.0, 0.0)
+	token_btn.visible = GameManager.contract_refresh_tokens > 0
+	token_btn.pressed.connect(func(): _on_token_pressed(slot))
+	action_row.add_child(token_btn)
 
 	var card := {
 		"root":        panel,
@@ -149,6 +162,7 @@ func _make_contract_card(slot: int) -> Dictionary:
 		"gold_lbl":    gold_lbl,
 		"timer_bar":   timer_bar,
 		"fulfill_btn": fulfill_btn,
+		"token_btn":   token_btn,
 	}
 	return card
 
@@ -272,6 +286,9 @@ func _process(_delta: float) -> void:
 		bar.value            = clampf(frac, 0.0, 1.0)
 		# Colour shifts red as time runs low
 		bar.modulate = Color(0.3, 0.8, 1.0).lerp(Color(1.0, 0.2, 0.2), 1.0 - frac)
+		# Show token button only when player has tokens
+		if _cards[i].has("token_btn"):
+			_cards[i]["token_btn"].visible = GameManager.contract_refresh_tokens > 0
 
 # -----------------------------------------------------------------------------
 # Refresh helpers
@@ -383,3 +400,10 @@ func _on_contract_fulfilled(_slot: int, gold: float) -> void:
 
 func _on_contract_expired(_slot: int) -> void:
 	pass  # card auto-refreshed via contract_updated
+
+func _on_token_pressed(slot: int) -> void:
+	if GameManager.contract_refresh_tokens <= 0:
+		return
+	ContractManager.refresh_slot(slot)
+	GameManager.contract_refresh_tokens -= 1
+	_refresh_all()

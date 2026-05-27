@@ -85,6 +85,14 @@ func save() -> void:
 		"contracts":          ContractManager.get_save_data(),
 		# Auto-dropper positions
 		"dropper_positions":  _get_board().get_dropper_positions() if _get_board() else [],
+		# Shop state
+		"active_skin":             GameManager.active_skin,
+		"owned_skins":             GameManager.owned_skins.duplicate(),
+		"active_theme":            GameManager.active_theme,
+		"offline_overdrive_tier":  GameManager.offline_overdrive_tier,
+		"contract_refresh_tokens": GameManager.contract_refresh_tokens,
+		"has_golden_drone":        GameManager.has_golden_drone,
+		"has_expanded_silos":      GameManager.has_expanded_silos,
 		# Offline timestamp — always written last so it's as fresh as possible
 		"quit_timestamp":     int(Time.get_unix_time_from_system()),
 	}
@@ -150,6 +158,24 @@ func _apply_to_game_manager(data: Dictionary) -> void:
 		GameManager.has_gate           = bool(data["has_gate"])
 	if data.has("auto_dropper_count"):
 		GameManager.auto_dropper_count = int(data["auto_dropper_count"])
+	# Shop purchases
+	if data.has("active_skin"):
+		GameManager.active_skin = str(data["active_skin"])
+	if data.has("owned_skins") and data["owned_skins"] is Array:
+		GameManager.owned_skins = data["owned_skins"].duplicate()
+		# Always ensure "default" is present
+		if "default" not in GameManager.owned_skins:
+			GameManager.owned_skins.push_front("default")
+	if data.has("active_theme"):
+		GameManager.active_theme = str(data["active_theme"])
+	if data.has("offline_overdrive_tier"):
+		GameManager.offline_overdrive_tier  = int(data["offline_overdrive_tier"])
+	if data.has("contract_refresh_tokens"):
+		GameManager.contract_refresh_tokens = int(data["contract_refresh_tokens"])
+	if data.has("has_golden_drone"):
+		GameManager.has_golden_drone  = bool(data["has_golden_drone"])
+	if data.has("has_expanded_silos"):
+		GameManager.has_expanded_silos = bool(data["has_expanded_silos"])
 	# Dropper positions restored after Board is ready via call_deferred
 	if data.has("dropper_positions") and not data["dropper_positions"].is_empty():
 		call_deferred("_restore_droppers", data["dropper_positions"])

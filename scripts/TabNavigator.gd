@@ -41,6 +41,7 @@ enum Tab { WAREHOUSE, BOARD, SHIPPING, SHOP, SETTINGS }
 @onready var _panel_settings:  Control = $Panels/SettingsPanel
 
 var _tabs: Dictionary = {}
+var _panel_bgs: Array  = []   # ColorRect refs for each non-board panel bg
 
 func _ready() -> void:
 	var vp: Vector2 = get_viewport_rect().size
@@ -82,6 +83,7 @@ func _ready() -> void:
 		bg.mouse_filter = Control.MOUSE_FILTER_IGNORE  # let panel handle input
 		panel.add_child(bg)
 		panel.move_child(bg, 0)  # push behind any existing children
+		_panel_bgs.append(bg)    # store ref for theme updates
 
 	# --- Button labels ---
 	_btn_warehouse.text = "Warehouse"
@@ -115,6 +117,10 @@ func _ready() -> void:
 	var shipping_ui: Node = load("res://scripts/ShippingUI.gd").new()
 	_panel_shipping.add_child(shipping_ui)
 
+	# Attach ShopUI to ShopPanel
+	var shop_ui: Node = load("res://scripts/ShopUI.gd").new()
+	_panel_shop.add_child(shop_ui)
+
 	# Inject LevelIndicator into BoardPanel
 	var level_ind: Node = load("res://scripts/LevelIndicator.gd").new()
 	_panel_board.add_child(level_ind)
@@ -122,6 +128,10 @@ func _ready() -> void:
 	# Inject LevelTransitionUI after the current frame so the viewport
 	# is fully laid out — this is critical for anchor calculations to work.
 	call_deferred("_inject_level_transition_ui")
+
+	# Apply saved theme to panel backgrounds immediately
+	GameManager.theme_changed.connect(_on_theme_changed)
+	_on_theme_changed(GameManager.active_theme)
 
 	_switch_to(Tab.BOARD)
 
@@ -140,3 +150,17 @@ func _inject_level_transition_ui() -> void:
 	# (our parent) so it inherits the correct viewport rect for anchors.
 	var trans_ui: Node = load("res://scripts/LevelTransitionUI.gd").new()
 	get_parent().add_child(trans_ui)
+
+# ---- Theme support ----------------------------------------------------------
+const THEME_BG_COLORS: Dictionary = {
+	"factory":   Color(0.10, 0.11, 0.14),
+	"cyberpunk": Color(0.04, 0.02, 0.12),
+	"steampunk": Color(0.14, 0.09, 0.04),
+	"zen":       Color(0.04, 0.08, 0.06),
+}
+
+func _on_theme_changed(theme_id: String) -> void:
+	var col: Color = THEME_BG_COLORS.get(theme_id, THEME_BG_COLORS["factory"])
+	for bg in _panel_bgs:
+		if is_instance_valid(bg):
+			bg.color = col

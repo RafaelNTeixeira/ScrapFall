@@ -13,6 +13,8 @@ signal resource_collected(resource_type: String, new_total: int)
 signal gold_changed(new_total: float)
 signal storage_full(resource_type: String)       # fires when a slot is capped
 signal ball_drop_failed()                        # fires when energy too low
+signal skin_changed(skin_id: String)             # emitted when active skin changes
+signal theme_changed(theme_id: String)           # emitted when board theme changes
 
 # -----------------------------------------------------------------------------
 # Power Meter Constants
@@ -49,7 +51,7 @@ var storage_caps: Dictionary = {
 # -----------------------------------------------------------------------------
 # Gold
 # -----------------------------------------------------------------------------
-var gold: float = 0.0
+var gold: float = 100000.0
 
 # -----------------------------------------------------------------------------
 # Buff-driven modifiers (accumulate permanently across levels)
@@ -62,6 +64,17 @@ var raw_rate_multiplier:      float = 1.0   # "Black Market"      +10%/stack
 var energy_peg_bonus:         float = 0.0   # "Supercharged Peg"  +1 energy/stack
 var contract_time_bonus:      float = 0.0   # "Extension Clause"  +60 sec/stack
 var portal_energy_bonus:      float = 0.0   # "Void Tap"          +3 energy/stack
+
+# -----------------------------------------------------------------------------
+# Shop Purchases — persisted by SaveManager, applied immediately on buy
+# -----------------------------------------------------------------------------
+var active_skin:             String = "default"  # currently equipped ball skin
+var owned_skins:             Array  = ["default"] # all unlocked skin IDs
+var active_theme:            String = "factory"   # board/panel colour theme
+var offline_overdrive_tier:  int    = 0           # 0=10%  1=50%  2=100% offline prod
+var contract_refresh_tokens: int    = 0           # max 10 held
+var has_golden_drone:        bool   = false       # +20% contract gold (one-time)
+var has_expanded_silos:      bool   = false       # +25% all storage caps (one-time)
 
 # -----------------------------------------------------------------------------
 # Upgrade Flags — prevent buying the same one-time upgrade twice
