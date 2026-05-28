@@ -92,8 +92,16 @@ func _make_contract_card(slot: int) -> Dictionary:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(0.0, 130.0)
 
+	# Inner padding so content doesn't press against the card border
+	var inner := MarginContainer.new()
+	inner.add_theme_constant_override("margin_left",   10)
+	inner.add_theme_constant_override("margin_right",  10)
+	inner.add_theme_constant_override("margin_top",     8)
+	inner.add_theme_constant_override("margin_bottom",  8)
+	panel.add_child(inner)
+
 	var vbox := VBoxContainer.new()
-	panel.add_child(vbox)
+	inner.add_child(vbox)
 
 	# Row 1: Faction name + 2× badge
 	var top_row := HBoxContainer.new()

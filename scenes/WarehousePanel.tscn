@@ -14,7 +14,8 @@ script = ExtResource("1_3bh1b")
 
 [node name="TitleLabel" type="Label" parent="." unique_id=1770693474]
 layout_mode = 0
-offset_right = 540.0
+offset_left = 16.0
+offset_right = 117.0
 offset_bottom = 49.0
 text = "Warehouse"
 horizontal_alignment = 1
