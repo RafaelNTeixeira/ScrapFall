@@ -141,9 +141,14 @@ func _switch_to(tab: Tab) -> void:
 		var is_active: bool   = (t == tab)
 		(entry[&"panel"] as Control).visible = is_active
 		(entry[&"btn"]   as Button).modulate = Color.WHITE if is_active else Color(0.55, 0.55, 0.55)
-	# BoardPanel is always MOUSE_FILTER_IGNORE (set in _ready).
-	# Other panels are hidden when not active — Godot 4 never sends
-	# input to invisible controls, so no extra filtering needed.
+
+	# Board.gd uses _unhandled_input for ball drops. Control mouse-filters
+	# don't block _unhandled_input, so we must disable it directly when the
+	# board tab is not visible. This also prevents the PowerMeterUI area from
+	# spawning balls while on other tabs.
+	var board_active: bool = (tab == Tab.BOARD)
+	for board in get_tree().get_nodes_in_group("board"):
+		board.set_process_unhandled_input(board_active)
 
 func _inject_level_transition_ui() -> void:
 	# LevelTransitionUI now extends Control — add it directly to UILayer
