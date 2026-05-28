@@ -125,9 +125,17 @@ func _build_resource_bar(res: String, parent: Control) -> void:
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(bg)
 
+	# Explicit inner padding — sits in PanelContainer's content rect, on top of bg
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left",   10)
+	margin.add_theme_constant_override("margin_right",  10)
+	margin.add_theme_constant_override("margin_top",     8)
+	margin.add_theme_constant_override("margin_bottom",  8)
+	card.add_child(margin)
+
 	var inner := VBoxContainer.new()
 	inner.add_theme_constant_override("separation", 3)
-	card.add_child(inner)
+	margin.add_child(inner)
 
 	# Label row: name  ·  amount  ·  "FULL!"
 	var label_row := HBoxContainer.new()
