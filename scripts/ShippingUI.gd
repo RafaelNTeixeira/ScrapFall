@@ -314,7 +314,7 @@ func _refresh_card(slot: int) -> void:
 
 	card["faction_lbl"].text = c["faction"]
 	card["res_lbl"].text     = _resources_string(c["resources"])
-	card["gold_lbl"].text    = "Reward: %d Gold" % int(c["gold_reward"])
+	card["gold_lbl"].text    = "Reward: %d Gold" % int(c["gold_reward"] * GameManager.contract_gold_multiplier)
 	card["timer_bar"].max_value = c["duration"]
 	_refresh_fulfill_buttons()
 
