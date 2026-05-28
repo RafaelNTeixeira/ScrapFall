@@ -93,6 +93,11 @@ func save() -> void:
 		"contract_refresh_tokens": GameManager.contract_refresh_tokens,
 		"has_golden_drone":        GameManager.has_golden_drone,
 		"has_expanded_silos":      GameManager.has_expanded_silos,
+		# Audio settings
+		"sfx_enabled":    AudioManager.sfx_enabled,
+		"music_enabled":  AudioManager.music_enabled,
+		"sfx_volume_db":  AudioManager.sfx_volume_db,
+		"music_volume_db": AudioManager.music_volume_db,
 		# Offline timestamp — always written last so it's as fresh as possible
 		"quit_timestamp":     int(Time.get_unix_time_from_system()),
 	}
@@ -176,6 +181,15 @@ func _apply_to_game_manager(data: Dictionary) -> void:
 		GameManager.has_golden_drone  = bool(data["has_golden_drone"])
 	if data.has("has_expanded_silos"):
 		GameManager.has_expanded_silos = bool(data["has_expanded_silos"])
+	# Audio settings — applied directly to AudioManager
+	if data.has("sfx_enabled"):
+		AudioManager.set_sfx_enabled(bool(data["sfx_enabled"]))
+	if data.has("music_enabled"):
+		AudioManager.set_music_enabled(bool(data["music_enabled"]))
+	if data.has("sfx_volume_db"):
+		AudioManager.set_sfx_volume_db(float(data["sfx_volume_db"]))
+	if data.has("music_volume_db"):
+		AudioManager.set_music_volume_db(float(data["music_volume_db"]))
 	# Dropper positions restored after Board is ready via call_deferred
 	if data.has("dropper_positions") and not data["dropper_positions"].is_empty():
 		call_deferred("_restore_droppers", data["dropper_positions"])

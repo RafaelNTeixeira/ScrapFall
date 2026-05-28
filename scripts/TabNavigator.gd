@@ -121,6 +121,10 @@ func _ready() -> void:
 	var shop_ui: Node = load("res://scripts/ShopUI.gd").new()
 	_panel_shop.add_child(shop_ui)
 
+	# Attach SettingsUI to SettingsPanel
+	var settings_ui: Node = load("res://scripts/SettingsUI.gd").new()
+	_panel_settings.add_child(settings_ui)
+
 	# Inject LevelIndicator into BoardPanel
 	var level_ind: Node = load("res://scripts/LevelIndicator.gd").new()
 	_panel_board.add_child(level_ind)

@@ -26,8 +26,10 @@ extends Node
 # -----------------------------------------------------------------------------
 # Settings — toggled by SettingsUI (Phase 10)
 # -----------------------------------------------------------------------------
-var sfx_enabled:   bool = true
-var music_enabled: bool = true
+var sfx_enabled:    bool  = true
+var music_enabled:  bool  = true
+var sfx_volume_db:  float = 0.0    # applied per-play; range -80..0
+var music_volume_db: float = -6.0  # applied to _music_player
 
 # -----------------------------------------------------------------------------
 # Internal players
@@ -66,7 +68,7 @@ func play(stream: AudioStream, volume_db: float = 0.0) -> void:
 	var player := _sfx_pool[_pool_index]
 	_pool_index = (_pool_index + 1) % SFX_POOL_SIZE
 	player.stream    = stream
-	player.volume_db = volume_db
+	player.volume_db = sfx_volume_db + volume_db   # master sfx vol + per-call offset
 	player.play()
 
 func play_music() -> void:
@@ -74,7 +76,8 @@ func play_music() -> void:
 		return
 	if _music_player.playing:
 		return
-	_music_player.stream = music_board
+	_music_player.stream    = music_board
+	_music_player.volume_db = music_volume_db
 	_music_player.play()
 
 func stop_music() -> void:
@@ -92,3 +95,11 @@ func set_music_enabled(enabled: bool) -> void:
 		play_music()
 	else:
 		stop_music()
+
+func set_sfx_volume_db(db: float) -> void:
+	sfx_volume_db = db
+	# Running sounds keep their volume; new plays pick up sfx_volume_db automatically.
+
+func set_music_volume_db(db: float) -> void:
+	music_volume_db = db
+	_music_player.volume_db = db
