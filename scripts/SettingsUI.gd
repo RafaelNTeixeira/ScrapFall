@@ -384,8 +384,10 @@ func _on_reset_pressed() -> void:
 	get_parent().add_child(_confirm_overlay)
 
 func _do_reset() -> void:
-	SaveManager.delete_save()
-	get_tree().reload_current_scene()
+	# hard_reset resets every autoload's in-memory state first, THEN reloads
+	# the scene. Calling only delete_save + reload_current_scene is not enough
+	# because autoloads persist across reloads and keep stale level/buff data.
+	SaveManager.hard_reset()
 
 # =============================================================================
 # Volume conversion helpers

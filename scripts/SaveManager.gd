@@ -212,6 +212,68 @@ func delete_save() -> void:
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(SAVE_PATH)
 
+# -----------------------------------------------------------------------------
+# hard_reset — wipes save file AND resets all autoload in-memory state.
+#
+# reload_current_scene() recreates scene nodes (Board, TabNavigator, etc.)
+# but autoloads PERSIST across reloads — they keep their runtime values.
+# We must manually restore every autoload to its startup defaults before
+# reloading, otherwise the fresh Board reads stale level/buff/upgrade data.
+# -----------------------------------------------------------------------------
+func hard_reset() -> void:
+	# 1. Delete the save file so a future load finds nothing
+	delete_save()
+
+	# 2. GameManager — all gameplay fields back to factory defaults
+	GameManager.power_meter              = GameManager.POWER_METER_MAX
+	GameManager.passive_regen_rate       = 1.0
+	for res in GameManager.resources:
+		GameManager.resources[res] = 0
+	for res in GameManager.storage_caps:
+		GameManager.storage_caps[res] = 500
+	GameManager.gold                     = 0.0
+	GameManager.power_meter_bonus        = 0.0
+	GameManager.dropper_speed_multiplier = 1.0
+	GameManager.contract_gold_multiplier = 1.0
+	GameManager.raw_rate_multiplier      = 1.0
+	GameManager.energy_peg_bonus         = 0.0
+	GameManager.contract_time_bonus      = 0.0
+	GameManager.portal_energy_bonus      = 0.0
+	GameManager.offline_multiplier       = 0.1
+	GameManager.has_splitter_peg         = false
+	GameManager.has_energy_peg           = false
+	GameManager.has_gate                 = false
+	GameManager.auto_dropper_count       = 0
+	GameManager.active_skin              = "default"
+	GameManager.owned_skins              = ["default"]
+	GameManager.active_theme             = "factory"
+	GameManager.offline_overdrive_tier   = 0
+	GameManager.contract_refresh_tokens  = 0
+	GameManager.has_golden_drone         = false
+	GameManager.has_expanded_silos       = false
+
+	# 3. LevelManager
+	LevelManager.current_level        = 1
+	LevelManager.contracts_this_level = 0
+
+	# 4. BuffManager — clear all stacks
+	BuffManager.buff_counts = {}
+
+	# 5. UpgradeManager — mark every upgrade as unpurchased/unplaced
+	for id in UpgradeManager.UPGRADES:
+		UpgradeManager.UPGRADES[id]["purchased"] = false
+		if UpgradeManager.UPGRADES[id].has("placed"):
+			UpgradeManager.UPGRADES[id]["placed"] = false
+	UpgradeManager.pending_placement = ""
+
+	# 6. ContractManager — regenerate all slots from scratch
+	#    apply_save_data([]) clears then refills to SLOT_COUNT fresh contracts
+	ContractManager.apply_save_data([])
+
+	# 7. Reload scene — Board._ready() reads LevelManager.current_level (1),
+	#    WarehouseUI._ready() reads clean GameManager + empty BuffManager, etc.
+	get_tree().reload_current_scene()
+
 func _get_gate_manager() -> Node:
 	var board := _get_board()
 	if board and board.has_node("GateManager"):
