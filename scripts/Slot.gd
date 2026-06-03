@@ -117,9 +117,9 @@ func _on_body_entered(body: Node) -> void:
 		_play_collect_fx()
 
 func _play_collect_fx() -> void:
-	## Quick upward pulse to give tactile feedback on collection.
 	var tween: Tween = create_tween()
 	tween.tween_property(self, "scale", Vector2(1.15, 1.15), 0.07)\
 		 .set_ease(Tween.EASE_OUT)
 	tween.tween_property(self, "scale", Vector2(1.0, 1.0), 0.12)\
 		 .set_ease(Tween.EASE_IN_OUT)
+	AudioManager.play(AudioManager.sfx_slot_collect)

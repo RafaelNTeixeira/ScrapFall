@@ -67,8 +67,11 @@ func _ready() -> void:
 	_generate_pegs()
 	_generate_slots()
 	_generate_walls()
-	# Deferred so LevelManager save data is applied before hazards spawn
 	call_deferred("_spawn_hazards")
+	call_deferred("_start_board_music")
+
+func _start_board_music() -> void:
+	AudioManager.play_music()
 
 # -----------------------------------------------------------------------------
 # Geometry helpers
@@ -247,6 +250,7 @@ func _spawn_ball(spawn_pos: Vector2, inherit_velocity: Vector2 = Vector2.ZERO, i
 
 	add_child(ball)
 	active_balls.append(ball)
+	AudioManager.play(AudioManager.sfx_ball_spawn, -5.0 if is_split else 0.0)
 
 # -----------------------------------------------------------------------------
 # Signal handlers

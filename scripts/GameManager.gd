@@ -51,7 +51,7 @@ var storage_caps: Dictionary = {
 # -----------------------------------------------------------------------------
 # Gold
 # -----------------------------------------------------------------------------
-var gold: float = 100000.0
+var gold: float = 0.0
 
 # -----------------------------------------------------------------------------
 # Buff-driven modifiers (accumulate permanently across levels)
@@ -193,23 +193,21 @@ var offline_multiplier: float = 0.1
 const OFFLINE_CAP_HOURS: float = 8.0   # max hours of offline credit
 
 func apply_offline_progress(elapsed_seconds: float) -> void:
-	# Cap offline time so the game doesn't flood storage on long absences
 	var capped: float  = minf(elapsed_seconds, OFFLINE_CAP_HOURS * 3600.0)
 	var minutes: float = capped / 60.0
-
-	# Award resources proportional to time — 1 unit per minute per resource
-	# as a simple base rate. Upgrade system will multiply this later.
-	var award: int = int(minutes * offline_multiplier)
+	var award: int     = int(minutes * offline_multiplier)
 	if award <= 0:
 		return
 
+	last_offline_earnings.clear()
 	for res_type in RESOURCE_TYPES:
-		collect_resource(res_type, award)
+		var earned: int = collect_resource(res_type, award)
+		if earned > 0:
+			last_offline_earnings[res_type] = earned
 
-	# Also restore power meter fully after offline time
 	_add_power(effective_power_max())
-
-	# Store elapsed for UI to show "You were away X hours" popup
 	last_offline_seconds = capped
 
-var last_offline_seconds: float = 0.0
+# Populated by apply_offline_progress; read by OfflinePopupUI on startup
+var last_offline_seconds:  float      = 0.0
+var last_offline_earnings: Dictionary = {}   # e.g. { "Wood": 42, "Copper": 12 }

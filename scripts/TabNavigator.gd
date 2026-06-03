@@ -41,7 +41,9 @@ enum Tab { WAREHOUSE, BOARD, SHIPPING, SHOP, SETTINGS }
 @onready var _panel_settings:  Control = $Panels/SettingsPanel
 
 var _tabs: Dictionary = {}
-var _panel_bgs: Array  = []   # ColorRect refs for each non-board panel bg
+var _panel_bgs: Array  = []
+var _current_tab: Tab  = Tab.BOARD   # tracked for tab-switch sound
+var _tabs_ready:  bool = false       # suppresses sound on the startup _switch_to call
 
 func _ready() -> void:
 	var vp: Vector2 = get_viewport_rect().size
@@ -138,8 +140,17 @@ func _ready() -> void:
 	_on_theme_changed(GameManager.active_theme)
 
 	_switch_to(Tab.BOARD)
+	_tabs_ready = true   # allow tab-switch sound from here on
+
+	# Deferred so viewport is fully sized before safe-area offsets are read
+	call_deferred("_apply_safe_area")
+	call_deferred("_inject_offline_popup")
 
 func _switch_to(tab: Tab) -> void:
+	if _tabs_ready and tab != _current_tab:
+		AudioManager.play(AudioManager.sfx_tab_switch)
+	_current_tab = tab
+
 	for t in _tabs:
 		var entry: Dictionary = _tabs[t]
 		var is_active: bool   = (t == tab)
@@ -155,10 +166,35 @@ func _switch_to(tab: Tab) -> void:
 		board.set_process_unhandled_input(board_active)
 
 func _inject_level_transition_ui() -> void:
-	# LevelTransitionUI now extends Control — add it directly to UILayer
-	# (our parent) so it inherits the correct viewport rect for anchors.
 	var trans_ui: Node = load("res://scripts/LevelTransitionUI.gd").new()
 	get_parent().add_child(trans_ui)
+
+func _inject_offline_popup() -> void:
+	# Only show when the player was away long enough to earn something.
+	# OfflinePopupUI.gd frees itself immediately if last_offline_seconds < 60.
+	if GameManager.last_offline_seconds < 60.0:
+		return
+	var popup: Node = load("res://scripts/OfflinePopupUI.gd").new()
+	get_parent().add_child(popup)
+
+# ---- Android safe area (notch / home-bar) -----------------------------------
+# Called deferred so the viewport is fully sized first.
+func _apply_safe_area() -> void:
+	var safe_rect:  Rect2i = DisplayServer.get_display_safe_area()
+	var screen_h:   int    = DisplayServer.window_get_size().y
+
+	var top_inset:    float = float(safe_rect.position.y)
+	var bottom_inset: float = float(screen_h - safe_rect.end.y)
+
+	# Shift panels down past the notch (adds to the existing POWER_METER_HEIGHT gap)
+	if top_inset > 0.0:
+		_panels.set_offset(SIDE_TOP, POWER_METER_HEIGHT + top_inset)
+
+	# Lift tab bar above the home-bar gesture strip
+	if bottom_inset > 0.0:
+		_tab_bar.set_offset(SIDE_TOP,    -(TAB_BAR_HEIGHT + bottom_inset))
+		_tab_bar.set_offset(SIDE_BOTTOM, -bottom_inset)
+		_panels.set_offset(SIDE_BOTTOM,  -(TAB_BAR_HEIGHT + bottom_inset))
 
 # ---- Theme support ----------------------------------------------------------
 const THEME_BG_COLORS: Dictionary = {

@@ -63,12 +63,14 @@ func _trigger_hit_effect() -> void:
 	var tween := create_tween()
 	tween.tween_property(self, "scale", Vector2(1.35, 1.35), 0.06).set_ease(Tween.EASE_OUT)
 	tween.tween_property(self, "scale", Vector2(1.0,  1.0),  0.12).set_ease(Tween.EASE_IN_OUT)
+	AudioManager.play(AudioManager.sfx_peg_hit)
 
 func _trigger_type_effect(ball: RigidBody2D) -> void:
 	match peg_type:
 		PegType.ENERGY:
 			emit_signal("energy_peg_hit")
 			_flash_color(Color(1.0, 0.95, 0.3))
+			AudioManager.play(AudioManager.sfx_peg_energy)
 		PegType.SPLITTER:
 			# Only split if this specific ball hasn't been split yet.
 			# This prevents chain-splits when the new ball immediately

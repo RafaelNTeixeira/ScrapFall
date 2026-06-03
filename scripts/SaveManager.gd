@@ -251,6 +251,8 @@ func hard_reset() -> void:
 	GameManager.contract_refresh_tokens  = 0
 	GameManager.has_golden_drone         = false
 	GameManager.has_expanded_silos       = false
+	GameManager.last_offline_seconds     = 0.0
+	GameManager.last_offline_earnings    = {}
 
 	# 3. LevelManager
 	LevelManager.current_level        = 1
