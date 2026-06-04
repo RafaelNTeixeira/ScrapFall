@@ -61,6 +61,8 @@ func _on_body_entered(body: Node) -> void:
 
 	body.set_meta("portal_cooldown", true)
 
+	AudioManager.play(AudioManager.sfx_portal)
+
 	# PhysicsServer2D is the ONLY reliable way to teleport a RigidBody2D.
 	# Setting global_position directly or via set_deferred gets overridden
 	# by the physics engine in the same step.

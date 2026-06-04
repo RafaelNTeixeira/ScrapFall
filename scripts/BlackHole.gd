@@ -45,6 +45,7 @@ func _process(delta: float) -> void:
 func _on_body_entered(body: Node) -> void:
 	if not body.has_method("enter_slot"):
 		return
+	AudioManager.play(AudioManager.sfx_black_hole)
 	# "void" is not a real resource — GameManager.collect_resource ignores it,
 	# ball simply gets removed. This keeps Board.active_balls consistent.
 	body.enter_slot("void")

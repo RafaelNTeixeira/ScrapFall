@@ -9,6 +9,8 @@
 [ext_resource type="AudioStream" uid="uid://cal51b1pok2jm" path="res://audio/NoEnergy.wav" id="6_muqnj"]
 [ext_resource type="AudioStream" uid="uid://dmvayj3uya7fl" path="res://audio/TabSwitch.wav" id="7_buqc2"]
 [ext_resource type="AudioStream" uid="uid://ci031ag32ht8e" path="res://audio/musics/Music.wav" id="8_k2lc1"]
+[ext_resource type="AudioStream" uid="uid://b6dx6cejy4aky" path="res://audio/PortalWhoosh.wav" id="9_qtie0"]
+[ext_resource type="AudioStream" uid="uid://rki2ighm5sr2" path="res://audio/BlackHole.wav" id="10_3uvv3"]
 
 [node name="AudioManager" type="Node" unique_id=2054178993]
 script = ExtResource("1_hmi33")
@@ -19,4 +21,6 @@ sfx_slot_collect = ExtResource("5_3uvv3")
 sfx_no_energy = ExtResource("6_muqnj")
 sfx_storage_full = ExtResource("6_jtlmv")
 sfx_tab_switch = ExtResource("7_buqc2")
+sfx_portal = ExtResource("9_qtie0")
+sfx_black_hole = ExtResource("10_3uvv3")
 music_playlist = Array[AudioStream]([ExtResource("8_k2lc1")])

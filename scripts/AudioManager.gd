@@ -19,28 +19,29 @@ extends Node
 # -----------------------------------------------------------------------------
 @export var sfx_ball_spawn:   AudioStream
 @export var sfx_peg_hit:      AudioStream
-@export var sfx_peg_energy:   AudioStream   # distinct sound for energy pegs
+@export var sfx_peg_energy:   AudioStream
 @export var sfx_slot_collect: AudioStream
-@export var sfx_no_energy:    AudioStream   # buzz when energy too low
-@export var sfx_storage_full: AudioStream   # warning when resource cap hit
+@export var sfx_no_energy:    AudioStream
+@export var sfx_storage_full: AudioStream
 @export var sfx_tab_switch:   AudioStream
+@export var sfx_portal:       AudioStream   # ball teleported through a portal
+@export var sfx_black_hole:   AudioStream   # ball absorbed by a black hole
 
 # -----------------------------------------------------------------------------
-# Music playlist — drag any number of tracks here in the Inspector
+# Music playlist
 # -----------------------------------------------------------------------------
 @export var music_playlist: Array[AudioStream] = []
-@export var music_shuffle:  bool = false   # randomise playback order
+@export var music_shuffle:  bool = false
 
-# Emitted whenever a new track starts playing (index into music_playlist)
 signal track_changed(track_index: int)
 
 # -----------------------------------------------------------------------------
-# Settings — controlled by SettingsUI
+# Settings — 50 on the 0-100 slider maps to linear_to_db(0.5) ≈ -6 dB
 # -----------------------------------------------------------------------------
 var sfx_enabled:     bool  = true
 var music_enabled:   bool  = true
-var sfx_volume_db:   float = 0.0
-var music_volume_db: float = -6.0
+var sfx_volume_db:   float = -6.0   # default 50 % volume
+var music_volume_db: float = -6.0   # default 50 % volume
 
 # -----------------------------------------------------------------------------
 # Internal state
