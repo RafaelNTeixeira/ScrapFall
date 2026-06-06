@@ -11,7 +11,7 @@ signal progress_changed(contracts_done: int, contracts_needed: int)
 signal advance_available(available: bool)
 signal show_advance_ui_requested()   # ShippingUI fires this; LevelTransitionUI listens
 
-var current_level:          int = 16
+var current_level:          int = 1
 var contracts_this_level:   int = 0
 
 # -----------------------------------------------------------------------------
