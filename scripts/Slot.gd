@@ -43,6 +43,14 @@ const SLOT_COLORS: Dictionary = {
 	"Copper": Color(0.72, 0.35, 0.10),
 }
 
+# Slot multiplier — rotates every 30 s, staggered so not all slots sync
+var _multiplier:       int   = 1
+var _mult_timer:       float = 0.0
+var _mult_label:       Label = null
+const MULT_INTERVAL:   float = 30.0
+# Weighted roll: 60 % ×1, 30 % ×2, 10 % ×3
+const MULT_WEIGHTS:    Array = [6, 3, 1]
+
 # -----------------------------------------------------------------------------
 # _ready
 # -----------------------------------------------------------------------------
@@ -56,13 +64,60 @@ func _ready() -> void:
 	_update_label()
 
 	body_entered.connect(_on_body_entered)
-
-	# Update count label whenever a resource changes
 	GameManager.resource_collected.connect(_on_resource_collected)
+
+	# Multiplier label — sits above the slot, built in code
+	_mult_label = Label.new()
+	_mult_label.add_theme_font_size_override("font_size", 14)
+	_mult_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_mult_label.size = Vector2(slot_width, 22.0)
+	_mult_label.position = Vector2(-slot_width * 0.5, -slot_height * 0.5 - 24.0)
+	add_child(_mult_label)
+
+	# Stagger first rotation so slots don't all switch at the same time
+	_mult_timer = randf_range(5.0, MULT_INTERVAL)
+	_update_mult_label()
 
 # -----------------------------------------------------------------------------
 # Size the collision shape and background to match slot dimensions
 # -----------------------------------------------------------------------------
+func _process(delta: float) -> void:
+	_mult_timer -= delta
+	if _mult_timer <= 0.0:
+		_rotate_multiplier()
+		_mult_timer = MULT_INTERVAL
+
+func _rotate_multiplier() -> void:
+	var roll: int = randi() % 10
+	var acc:  int = 0
+	var new_mult: int = 1
+	for i in MULT_WEIGHTS.size():
+		acc += MULT_WEIGHTS[i]
+		if roll < acc:
+			new_mult = i + 1
+			break
+	_multiplier = new_mult
+	_update_mult_label()
+	if _multiplier > 1:
+		_flash_mult_label()
+
+func _update_mult_label() -> void:
+	if not _mult_label:
+		return
+	if _multiplier == 1:
+		_mult_label.text = ""
+	else:
+		_mult_label.text = "×%d" % _multiplier
+		_mult_label.add_theme_color_override("font_color",
+			Color(1.0, 0.82, 0.1) if _multiplier == 2 else Color(1.0, 0.45, 0.1))
+
+func _flash_mult_label() -> void:
+	if not _mult_label:
+		return
+	var tween := create_tween()
+	tween.tween_property(_mult_label, "scale", Vector2(1.5, 1.5), 0.1)
+	tween.tween_property(_mult_label, "scale", Vector2(1.0, 1.0), 0.15)
+
 func _apply_size() -> void:
 	if _col:
 		var shape: RectangleShape2D = RectangleShape2D.new()
@@ -114,7 +169,12 @@ func _flash_full_warning() -> void:
 func _on_body_entered(body: Node) -> void:
 	if body.has_method("enter_slot"):
 		body.enter_slot(resource_type)
+		# Bonus collections for ×2 / ×3 multiplier
+		for _i in (_multiplier - 1):
+			GameManager.collect_resource(resource_type, 1)
 		_play_collect_fx()
+		if _multiplier > 1:
+			_flash_mult_label()
 
 func _play_collect_fx() -> void:
 	var tween: Tween = create_tween()

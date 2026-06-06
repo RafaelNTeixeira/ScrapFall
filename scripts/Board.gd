@@ -60,18 +60,84 @@ const SLOT_TYPES: Array[String] = ["Wood", "Steel", "Gold", "Glass", "Copper"]
 # -----------------------------------------------------------------------------
 # Ready
 # -----------------------------------------------------------------------------
+## Active coins on the board
+var _coins: Array = []
+var _coin_spawn_timer: float = 20.0
+const COIN_SPAWN_MIN: float  = 15.0
+const COIN_SPAWN_MAX: float  = 35.0
+
 func _ready() -> void:
 	add_to_group("board")
 	call_deferred("_ready_upgrade_hooks")
 	_calculate_board_origin()
 	_generate_pegs()
+	call_deferred("_apply_peg_overrides")   # after pegs exist in scene tree
 	_generate_slots()
 	_generate_walls()
 	call_deferred("_spawn_hazards")
 	call_deferred("_start_board_music")
+	_coin_spawn_timer = randf_range(COIN_SPAWN_MIN, COIN_SPAWN_MAX)
 
 func _start_board_music() -> void:
 	AudioManager.play_music()
+
+# -----------------------------------------------------------------------------
+# Coin spawning
+# -----------------------------------------------------------------------------
+func _process(delta: float) -> void:
+	_coin_spawn_timer -= delta
+	if _coin_spawn_timer <= 0.0:
+		_spawn_coin()
+		_coin_spawn_timer = randf_range(COIN_SPAWN_MIN, COIN_SPAWN_MAX)
+	# Purge freed coin refs
+	_coins = _coins.filter(func(c): return is_instance_valid(c))
+
+func _spawn_coin() -> void:
+	if all_pegs.is_empty():
+		return
+	var eligible: Array = all_pegs.filter(func(p):
+		return p.peg_index.y >= 2 and p.peg_index.y <= 9
+	)
+	if eligible.is_empty():
+		return
+	var anchor: Node = eligible[randi() % eligible.size()]
+	var coin   := Area2D.new()
+	coin.set_script(load("res://scripts/CoinNode.gd"))
+	add_child(coin)
+	coin.global_position = anchor.global_position + Vector2(
+		randf_range(-18.0, 18.0), randf_range(12.0, 26.0))
+	_coins.append(coin)
+
+# -----------------------------------------------------------------------------
+# Peg overrides — apply layout's peg_pattern and peg_overrides after generation
+# -----------------------------------------------------------------------------
+func _apply_peg_overrides() -> void:
+	var layout:  Dictionary = LevelManager.get_layout()
+	var pattern: String     = layout.get("peg_pattern", "")
+
+	match pattern:
+		"checkerboard_energy":
+			for peg in all_pegs:
+				if (peg.peg_index.x + peg.peg_index.y) % 2 == 0:
+					peg.set_peg_type(Peg.PegType.ENERGY)
+
+	for ov in layout.get("peg_overrides", []):
+		var peg = _get_peg_by_index(ov["col"], ov["row"])
+		if peg == null:
+			continue
+		match ov.get("type", "normal"):
+			"energy":   peg.set_peg_type(Peg.PegType.ENERGY)
+			"splitter": peg.set_peg_type(Peg.PegType.SPLITTER)
+			"bouncy":   peg.set_peg_type(Peg.PegType.BOUNCY)
+			"magnet":   peg.set_peg_type(Peg.PegType.MAGNET)
+			"sticky":   peg.set_peg_type(Peg.PegType.STICKY)
+
+## Find a peg by its (col, row) index — O(n) but only called on level load.
+func _get_peg_by_index(col: int, row: int) -> Node:
+	for peg in all_pegs:
+		if peg.peg_index == Vector2i(col, row):
+			return peg
+	return null
 
 # -----------------------------------------------------------------------------
 # Geometry helpers
@@ -126,6 +192,8 @@ func _generate_pegs() -> void:
 			peg.energy_peg_hit.connect(_on_energy_peg_hit)
 			peg.split_ball_requested.connect(_on_split_ball_requested)
 			peg.bouncy_ball_hit.connect(_on_bouncy_ball_hit)
+			peg.magnet_peg_hit.connect(_on_magnet_peg_hit)
+			peg.sticky_peg_hit.connect(_on_sticky_peg_hit)
 
 			add_child(peg)
 			row_array.append(peg)
@@ -257,6 +325,12 @@ func _spawn_ball(spawn_pos: Vector2, inherit_velocity: Vector2 = Vector2.ZERO, i
 # -----------------------------------------------------------------------------
 func _on_energy_peg_hit() -> void:
 	GameManager.award_energy_peg_hit()
+
+func _on_magnet_peg_hit() -> void:
+	pass   # attraction handled inside Peg._physics_process
+
+func _on_sticky_peg_hit() -> void:
+	pass   # catch/release handled inside Peg._catch_ball
 
 ## Spawns a second ball when the Splitter peg fires.
 func _on_split_ball_requested(origin_pos: Vector2, original_velocity: Vector2) -> void:
@@ -398,6 +472,24 @@ func _handle_placement_tap(tap_pos: Vector2) -> bool:
 				_pending_upgrade = ""
 				_unhighlight_all_pegs()
 			return true
+		"magnet_peg":
+			var peg = _peg_at_screen_pos(tap_pos)
+			if peg != null:
+				peg.set_peg_type(Peg.PegType.MAGNET)
+				UpgradeManager.confirm_placement(_pending_upgrade)
+				_placement_mode  = false
+				_pending_upgrade = ""
+				_unhighlight_all_pegs()
+			return true
+		"sticky_peg":
+			var peg = _peg_at_screen_pos(tap_pos)
+			if peg != null:
+				peg.set_peg_type(Peg.PegType.STICKY)
+				UpgradeManager.confirm_placement(_pending_upgrade)
+				_placement_mode  = false
+				_pending_upgrade = ""
+				_unhighlight_all_pegs()
+			return true
 		# Peg relocation — reset old peg to NORMAL then re-enter selection
 		"relocate_splitter":
 			var peg = _peg_at_screen_pos(tap_pos, 35.0, true)
@@ -424,6 +516,26 @@ func _handle_placement_tap(tap_pos: Vector2) -> bool:
 			if peg != null:
 				_reset_peg_of_type(Peg.PegType.BOUNCY)
 				peg.set_peg_type(Peg.PegType.BOUNCY)
+				UpgradeManager.confirm_placement(_pending_upgrade)
+				_placement_mode  = false
+				_pending_upgrade = ""
+				_unhighlight_all_pegs()
+			return true
+		"relocate_magnet":
+			var peg = _peg_at_screen_pos(tap_pos)
+			if peg != null:
+				_reset_peg_of_type(Peg.PegType.MAGNET)
+				peg.set_peg_type(Peg.PegType.MAGNET)
+				UpgradeManager.confirm_placement(_pending_upgrade)
+				_placement_mode  = false
+				_pending_upgrade = ""
+				_unhighlight_all_pegs()
+			return true
+		"relocate_sticky":
+			var peg = _peg_at_screen_pos(tap_pos)
+			if peg != null:
+				_reset_peg_of_type(Peg.PegType.STICKY)
+				peg.set_peg_type(Peg.PegType.STICKY)
 				UpgradeManager.confirm_placement(_pending_upgrade)
 				_placement_mode  = false
 				_pending_upgrade = ""
@@ -501,6 +613,14 @@ func _highlight_for_mode(upgrade_id: String) -> void:
 		"bouncy_peg", "relocate_bouncy":
 			for peg in all_pegs:
 				if peg.is_bouncy_eligible():
+					peg.set_highlight(true)
+		"magnet_peg", "relocate_magnet":
+			for peg in all_pegs:
+				if peg.is_magnet_eligible():
+					peg.set_highlight(true)
+		"sticky_peg", "relocate_sticky":
+			for peg in all_pegs:
+				if peg.is_sticky_eligible():
 					peg.set_highlight(true)
 		# Gate highlighting is handled by GateManager itself
 

@@ -7,11 +7,17 @@ class_name Peg
 signal energy_peg_hit()
 signal split_ball_requested(origin_pos: Vector2, original_velocity: Vector2)
 signal bouncy_ball_hit(ball: RigidBody2D)
+signal magnet_peg_hit()
+signal sticky_peg_hit()
 
-enum PegType { NORMAL, ENERGY, SPLITTER, BOUNCY }
+enum PegType { NORMAL, ENERGY, SPLITTER, BOUNCY, MAGNET, STICKY }
 
 @export var peg_type: PegType = PegType.NORMAL
 var peg_index: Vector2i = Vector2i.ZERO
+
+# Magnet peg — attraction field
+var _magnet_area:    Area2D = null
+var _nearby_balls:   Array  = []
 
 const HIT_COOLDOWN: float = 0.25
 var _hit_cooldown_timer: float = 0.0
@@ -82,6 +88,15 @@ func _trigger_type_effect(ball: RigidBody2D) -> void:
 		PegType.BOUNCY:
 			emit_signal("bouncy_ball_hit", ball)
 			_flash_color(Color(0.238, 0.0, 0.294, 1.0))
+		PegType.MAGNET:
+			emit_signal("magnet_peg_hit")
+			_flash_color(Color(0.2, 0.6, 1.0))
+		PegType.STICKY:
+			emit_signal("sticky_peg_hit")
+			_flash_color(Color(0.3, 0.9, 0.4))
+			if not ball.get_meta("is_sticky_caught", false):
+				ball.set_meta("is_sticky_caught", true)
+				_catch_ball(ball)
 		PegType.NORMAL:
 			_flash_color(Color(1.1, 1.1, 1.1))
 
@@ -100,11 +115,63 @@ func set_peg_type(new_type: PegType) -> void:
 	peg_type = new_type
 	set_highlight(false)
 	_apply_visuals()
+	# Tear down / set up magnet area when type changes
+	if peg_type == PegType.MAGNET:
+		if _magnet_area == null:
+			_setup_magnet_area()
+	else:
+		if _magnet_area != null:
+			_magnet_area.queue_free()
+			_magnet_area = null
+		_nearby_balls.clear()
+
+# Magnet field setup — outer Area2D that tracks nearby balls
+func _setup_magnet_area() -> void:
+	_magnet_area = Area2D.new()
+	var col   := CollisionShape2D.new()
+	var shape := CircleShape2D.new()
+	shape.radius         = 110.0
+	col.shape            = shape
+	_magnet_area.add_child(col)
+	_magnet_area.collision_layer = 0
+	_magnet_area.collision_mask  = 2
+	_magnet_area.body_entered.connect(_on_ball_entered_field)
+	_magnet_area.body_exited.connect(_on_ball_exited_field)
+	add_child(_magnet_area)
+
+func _on_ball_entered_field(body: Node) -> void:
+	if body.has_method("enter_slot") and body not in _nearby_balls:
+		_nearby_balls.append(body)
+
+func _on_ball_exited_field(body: Node) -> void:
+	_nearby_balls.erase(body)
+
+func _physics_process(_delta: float) -> void:
+	if peg_type != PegType.MAGNET or _nearby_balls.is_empty():
+		return
+	_nearby_balls = _nearby_balls.filter(func(b): return is_instance_valid(b))
+	for ball in _nearby_balls:
+		var dir:   Vector2 = (global_position - ball.global_position)
+		var dist:  float   = dir.length()
+		if dist < 2.0:
+			continue
+		var strength: float = 900.0 * (1.0 - clampf(dist / 110.0, 0.0, 1.0))
+		ball.apply_central_force(dir.normalized() * strength)
 
 func _apply_visuals() -> void:
 	if not is_node_ready() or not has_node("Sprite2D"):
 		return
 	_sprite.modulate = _base_color()
+
+func _catch_ball(ball: RigidBody2D) -> void:
+	ball.freeze = true
+	ball.linear_velocity = Vector2.ZERO
+	get_tree().create_timer(0.35).timeout.connect(func():
+		if is_instance_valid(ball):
+			ball.freeze = false
+			ball.linear_velocity = Vector2(randf_range(-25.0, 25.0), 320.0)
+			ball.remove_meta("is_sticky_caught")
+	)
 
 func _base_color() -> Color:
 	match peg_type:
@@ -112,6 +179,8 @@ func _base_color() -> Color:
 		PegType.ENERGY:   return Color(0.8, 0.7, 0.0, 1.0)
 		PegType.SPLITTER: return Color(0.35, 0.80, 1.0)
 		PegType.BOUNCY:   return Color(0.4, 0.0, 0.4, 1.0)
+		PegType.MAGNET:   return Color(0.2, 0.5, 1.0, 1.0)
+		PegType.STICKY:   return Color(0.2, 0.75, 0.3, 1.0)
 	return Color.WHITE
 
 # -----------------------------------------------------------------------------
@@ -145,6 +214,12 @@ func is_splitter_eligible() -> bool:
 
 func is_bouncy_eligible() -> bool:
 	return peg_type == PegType.NORMAL and peg_index.y >= 3 and peg_index.y <= 8
+
+func is_magnet_eligible() -> bool:
+	return peg_type == PegType.NORMAL and peg_index.y >= 2 and peg_index.y <= 9
+
+func is_sticky_eligible() -> bool:
+	return peg_type == PegType.NORMAL and peg_index.y >= 2 and peg_index.y <= 9
 
 func mark_as_gate_anchor(active: bool) -> void:
 	if active:
